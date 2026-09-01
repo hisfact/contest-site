@@ -294,6 +294,7 @@ async function handleStatus(rawCode, env) {
     코드: code,
     코드표기: entry.코드표기 ?? code,
     팀명: teamLabel(entry, code),
+    이메일: entry.이메일 ?? '',
     순번: entry.순번 ?? null,
     제출,
     남은시도: n1.remaining,
@@ -445,7 +446,7 @@ async function handleAdmin(action, body, env) {
         const rec = records[code] ?? { 제출: {} };
         const fin = finalOf(rec);
         return {
-          코드: code, 코드표기: e.코드표기 ?? code, 팀명: e.팀명 ?? '', 순번: e.순번 ?? null,
+          코드: code, 코드표기: e.코드표기 ?? code, 팀명: e.팀명 ?? '', 이메일: e.이메일 ?? '', 순번: e.순번 ?? null,
           취소: (rec.취소 ?? []).map((c) => ({ 회차: c.회차, 원점수: c.원점수, 제출시각: c.제출시각, 취소시각: c.취소시각 })),
           제출: Object.fromEntries(Object.entries(rec.제출 ?? {}).map(([r, s]) => [r, { 원점수: s.원점수, 가중점수: s.가중점수, 적발: s.적발, 인용일치: s.인용일치, 오탐: s.오탐, 판단불가: s.판단불가, 제출시각: s.제출시각, 웹검색: s.웹검색 ?? null, 지침원문: s.지침원문 ?? '' }])),
           최종: fin ? { 채택회차: fin.채택회차, 최종점수: fin.최종점수 } : null,
@@ -455,16 +456,19 @@ async function handleAdmin(action, body, env) {
   }
 
   if (action === 'teams') {
-    // 항목: [{코드, 팀명}] — 코드는 정규화해서 맞춘다. 명부에 없는 코드는 무시하고 알려준다.
+    // 항목: [{코드, 팀명, 이메일?}] — 코드는 정규화해서 맞춘다. 명부에 없는 코드는 무시하고 알려준다.
+    // 이메일은 팀이 쓰는 룸 계정. 식별·표시용이며 인증에는 쓰지 않는다 (인증은 코드 하나).
     const items = Array.isArray(body.항목) ? body.항목 : [];
     const teams = await loadTeams(env);
     const applied = [], unknown = [];
     for (const it of items) {
       const code = normalizeCode(it.코드);
       const name = String(it.팀명 ?? '').trim();
+      const email = String(it.이메일 ?? '').trim();
       if (!teams.data.팀[code]) { unknown.push(it.코드); continue; }
       teams.data.팀[code].팀명 = name;
-      applied.push({ 코드: code, 팀명: name });
+      if (email || it.이메일 !== undefined) teams.data.팀[code].이메일 = email;
+      applied.push({ 코드: code, 팀명: name, 이메일: teams.data.팀[code].이메일 ?? '' });
     }
     if (applied.length) await ghPut(env, env.TEAMS_PATH, teams.data, teams.sha, `팀명 ${applied.length}건 갱신`);
     await purgeBoardCache();

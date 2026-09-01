@@ -60,6 +60,7 @@ function renderStatus(st) {
   fill(box, 
     el('div', { class: 'row', style: 'margin-top:12px' },
       el('strong', {}, st.팀명),
+      st.이메일 ? el('span', { class: 'muted small' }, st.이메일) : null,
       el('span', { class: 'badge info mono' }, st.코드표기),
       st.마감후 ? el('span', { class: 'badge bad' }, '마감') : el('span', { class: 'badge ok' }, '진행 중'),
     ),

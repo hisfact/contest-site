@@ -7,7 +7,8 @@
   "test": "npm run setup:test && node --test test/*.test.js",
   "dev": "wrangler dev",
   "deploy": "wrangler deploy",
-  "dev:local": "npm run setup:test && node scripts/dev-local.mjs"
+  "dev:local": "npm run setup:test && node scripts/dev-local.mjs",
+  "mails": "node scripts/make-mails.mjs"
  },
  "devDependencies": {
   "wrangler": "^4"

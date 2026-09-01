@@ -60,23 +60,26 @@ $('previewBtn').addEventListener('click', () => {
   const codes = new Map(Object.values(overview?.팀 ?? []).map((t) => [t.코드, t]));
   const norm = (s) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
   previewItems = $('namesInput').value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((line) => {
-    const [c, ...rest] = line.split(/\t|,/);
-    const code = norm(c ?? '');
-    const name = rest.join(',').trim();
+    const cells = line.split(/\t|,/).map((x) => x.trim());
+    const code = norm(cells[0] ?? '');
+    // 팀명·이메일 순서는 상관없다 — @ 가 있는 칸을 이메일로 본다
+    const email = cells.slice(1).find((x) => x.includes('@')) ?? '';
+    const name = cells.slice(1).filter((x) => x && x !== email).join(' ');
     const t = codes.get(code);
-    return { 코드: code, 팀명: name, 상태: !t ? '명부에 없음' : !name ? '팀명 비어 있음' : t.팀명 && t.팀명 !== name ? `변경 (${t.팀명} →)` : '반영 예정', ok: !!t && !!name };
+    const changed = t && ((t.팀명 && t.팀명 !== name) || (email && t.이메일 && t.이메일 !== email));
+    return { 코드: code, 팀명: name, 이메일: email, 상태: !t ? '명부에 없음' : !name ? '팀명 비어 있음' : changed ? `변경 (${t.팀명}${t.이메일 ? ' · ' + t.이메일 : ''} →)` : '반영 예정', ok: !!t && !!name };
   });
   const okCount = previewItems.filter((p) => p.ok).length;
   $('namesMsg').textContent = `${previewItems.length}줄 중 ${okCount}건 반영 가능`;
   $('applyBtn').disabled = okCount === 0;
   fill($('namesPreview'), el('div', { class: 'tablewrap' }, el('table', {},
-    el('thead', {}, el('tr', {}, el('th', {}, '코드'), el('th', {}, '팀명'), el('th', {}, '상태'))),
-    el('tbody', {}, previewItems.map((p) => el('tr', {}, el('td', { class: 'mono' }, p.코드), el('td', {}, p.팀명), el('td', { class: p.ok ? 'ok' : 'muted' }, el('span', { class: `badge ${p.ok ? 'ok' : 'warn'}` }, p.상태))))),
+    el('thead', {}, el('tr', {}, el('th', {}, '코드'), el('th', {}, '팀명'), el('th', {}, '이메일'), el('th', {}, '상태'))),
+    el('tbody', {}, previewItems.map((p) => el('tr', {}, el('td', { class: 'mono' }, p.코드), el('td', {}, p.팀명), el('td', { class: 'muted' }, p.이메일), el('td', { class: p.ok ? 'ok' : 'muted' }, el('span', { class: `badge ${p.ok ? 'ok' : 'warn'}` }, p.상태))))),
   )));
 });
 
 $('applyBtn').addEventListener('click', async () => {
-  const items = previewItems.filter((p) => p.ok).map(({ 코드, 팀명 }) => ({ 코드, 팀명 }));
+  const items = previewItems.filter((p) => p.ok).map(({ 코드, 팀명, 이메일 }) => ({ 코드, 팀명, ...(이메일 ? { 이메일 } : {}) }));
   $('applyBtn').disabled = true;
   try {
     const r = await admin('teams', { 항목: items });
@@ -98,7 +101,7 @@ function renderOverview(o) {
     el('tbody', {}, o.팀.map((t) => el('tr', {},
       el('td', { class: 'num' }, t.순번 ?? ''),
       el('td', { class: 'mono small' }, t.코드표기),
-      el('td', {}, t.팀명 || el('span', { class: 'muted' }, '(미입력)')),
+      el('td', {}, t.팀명 || el('span', { class: 'muted' }, '(미입력)'), t.이메일 ? el('div', { class: 'muted small' }, t.이메일) : null),
       ROUNDS.map((r) => {
         const s = t.제출[r];
         if (!s) return el('td', { class: 'muted' }, '—');
@@ -124,6 +127,40 @@ async function reopen(btn, team, round) {
     await load();
   } catch (e) { alertBox(cell, e.message); }
 }
+
+// ────────────────────────────────────────────── 코드 발송 메일 본문 (운영자가 행사용 메일에서 직접 보낸다)
+
+const SITE_URL = location.origin.startsWith('http') && !location.hostname.match(/^(localhost|127\.0\.0\.1)$/) ? location.origin : 'https://scinews-contest.pages.dev';
+const mailSubject = (t) => `[과학뉴스 검증 대회] ${t.팀명} 팀 제출 코드`;
+const mailBody = (t) => `${t.팀명} 팀 안녕하세요.
+
+과학뉴스 검증 대회 결과 제출에 쓰는 팀 코드입니다.
+
+  팀 코드:  ${t.코드표기}
+  제출 사이트:  ${SITE_URL}
+
+- 이 코드는 팀의 비밀번호입니다. 다른 팀에게 보이지 않게 해 주세요.
+- 사이트에서 코드를 넣고 "확인"을 누르면 팀명(${t.팀명})이 표시됩니다. 다른 팀명이 나오면 운영진에게 알려 주세요.
+- 하이픈과 대소문자는 상관없습니다. 복사해서 붙여넣는 것이 가장 정확합니다.
+- 제출은 1차 1회, 2차 3회입니다. 형식 검사는 횟수에 들어가지 않으니 마음껏 눌러 보세요.
+
+운영진 드림`;
+
+$('mailBtn').addEventListener('click', () => {
+  if (!overview) return;
+  const withMail = overview.팀.filter((t) => t.이메일 && t.팀명);
+  const without = overview.팀.filter((t) => !t.이메일 || !t.팀명);
+  const md = [
+    `# 팀 코드 발송 — ${withMail.length}통 (${new Date().toISOString().slice(0, 10)})`, '',
+    '코드가 들어 있는 파일입니다. 발송이 끝나면 지우세요. 저장소나 공유 폴더에 올리지 않습니다.', '',
+    ...withMail.flatMap((t) => ['---', `## ${t.순번}. ${t.팀명}`, `받는 사람: ${t.이메일}`, `제목: ${mailSubject(t)}`, '', mailBody(t), '']),
+    ...(without.length ? ['---', `## 팀명 또는 이메일이 없는 팀 (${without.length})`, ...without.map((t) => `- ${t.순번}. ${t.팀명 || '(팀명 없음)'} ${t.이메일 || '(이메일 없음)'}`)] : []),
+  ].join('\n');
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const a = el('a', { href: URL.createObjectURL(blob), download: `팀코드_발송_${new Date().toISOString().slice(0, 10)}.md` });
+  document.body.append(a); a.click(); a.remove();
+  $('overviewMeta').textContent = `메일 본문 ${withMail.length}통 생성${without.length ? ` · 팀명/이메일 없는 팀 ${without.length}` : ''}`;
+});
 
 // ────────────────────────────────────────────── 내려받기
 

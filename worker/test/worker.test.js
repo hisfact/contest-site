@@ -240,15 +240,22 @@ test('운영자 — 관리키 없으면 401, 팀명 일괄, 마감 전환, 회�
   assert.equal((await s.call('/api/admin/overview', { 관리키: 'wrong' })).status, 401);
   assert.equal((await s.call('/api/admin/overview', {})).status, 401);
 
-  const t = await s.call('/api/admin/teams', { 관리키: 'admin-secret', 항목: [{ 코드: 'abcd-efgh-2345', 팀명: '과학탐사대' }, { 코드: 'NOPE', 팀명: 'x' }] });
+  const t = await s.call('/api/admin/teams', { 관리키: 'admin-secret', 항목: [{ 코드: 'abcd-efgh-2345', 팀명: '과학탐사대', 이메일: 'room07@example.com' }, { 코드: 'NOPE', 팀명: 'x' }] });
   assert.equal(t.status, 200);
   assert.equal(t.body.반영.length, 1);
   assert.deepEqual(t.body.무시, ['NOPE']);
   assert.equal(s.gh.get('teams.json').팀.ABCDEFGH2345.팀명, '과학탐사대');
+  assert.equal(s.gh.get('teams.json').팀.ABCDEFGH2345.이메일, 'room07@example.com');
+  // 이메일은 표시용 — 상태 응답에 나오지만 인증에는 관여하지 않는다
+  assert.equal((await s.call('/api/status?code=ABCDEFGH2345')).body.이메일, 'room07@example.com');
+  // 팀명만 다시 보내면 이메일은 유지된다
+  await s.call('/api/admin/teams', { 관리키: 'admin-secret', 항목: [{ 코드: 'ABCDEFGH2345', 팀명: '과학탐사대2' }] });
+  assert.equal(s.gh.get('teams.json').팀.ABCDEFGH2345.이메일, 'room07@example.com');
 
   await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_2 });
   const ov = await s.call('/api/admin/overview', { 관리키: 'admin-secret' });
-  assert.equal(ov.body.팀[0].팀명, '과학탐사대');
+  assert.equal(ov.body.팀[0].팀명, '과학탐사대2');
+  assert.equal(ov.body.팀[0].이메일, 'room07@example.com');
   assert.equal(ov.body.팀[0].제출['2차-1'].원점수, 26.0);
   assert.equal(ov.body.마감.마감후, false);
 
