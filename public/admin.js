@@ -45,7 +45,7 @@ function renderDeadline(d) {
 }
 
 async function setDeadline(v) {
-  const label = v === true ? '지금 강제 마감합니다. 모든 팀의 제출이 막히고 리더보드에 전체 점수가 공개됩니다.' : v === false ? '강제로 엽니다. DEADLINE_ISO 가 지났어도 제출을 받습니다.' : 'DEADLINE_ISO 를 따르는 자동 모드로 돌립니다.';
+  const label = v === true ? '지금 강제 마감합니다. 모든 팀의 제출이 막히고, 각 팀은 내 결과에서 자기 점수·정답 풀이를, 운영자는 결과 발표에서 전체 순위를 볼 수 있게 됩니다.' : v === false ? '강제로 엽니다. DEADLINE_ISO 가 지났어도 제출을 받습니다.' : 'DEADLINE_ISO 를 따르는 자동 모드로 돌립니다.';
   if (!(await inlineConfirm($('deadlineRow'), label))) return;
   try {
     const r = await admin('deadline', { 마감: v });
