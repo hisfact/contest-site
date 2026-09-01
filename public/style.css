@@ -49,6 +49,10 @@ body {
 a { color: var(--accent); }
 code, .mono { font-family: var(--mono); font-size: 0.93em; }
 
+/* 데모 사이트 배너 (app.js IS_DEMO) */
+.demo-banner { background: var(--warn-bg); color: var(--warn); font-size: 13px; padding: 7px 20px; text-align: center; border-bottom: 1px solid var(--line); word-break: keep-all; }
+.demo-banner code { background: rgba(0,0,0,.08); padding: 1px 6px; border-radius: 4px; }
+
 /* 뼈대 */
 .top {
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;

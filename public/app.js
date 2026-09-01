@@ -1,10 +1,14 @@
 /* 제출·리더보드·운영자 화면 공용 스크립트.
    여기에 정답표를 넣지 않는다. 이 파일은 전부 공개된다. */
 
-// Worker 주소. 배포 뒤 실제 주소로 바꾼다. 로컬에서 `wrangler dev` 를 띄우면 8787 로 붙는다.
+// Worker 주소. 로컬에서 `wrangler dev` 를 띄우면 8787 로 붙는다.
+// 데모 사이트(주소에 'demo' 가 들어감, 예: scinews-contest-demo.pages.dev)는 같은 화면 코드를
+// 데모 Worker(contest-api-demo ← 저장소 contest-private-demo, 가짜 정답표)에 붙인다. 실제 대회 데이터와 완전히 분리된다.
 const PROD_API = 'https://contest-api.hisfact.workers.dev';
+const DEMO_API = 'https://contest-api-demo.hisfact.workers.dev';
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
-export const API = isLocal ? 'http://127.0.0.1:8787' : PROD_API;
+export const IS_DEMO = !isLocal && /demo/i.test(location.hostname);
+export const API = isLocal ? 'http://127.0.0.1:8787' : IS_DEMO ? DEMO_API : PROD_API;
 
 /** JSON API 호출. 실패하면 서버가 준 error 메시지를 담은 예외를 던진다. */
 export async function api(path, body, method = body ? 'POST' : 'GET') {
@@ -74,6 +78,7 @@ export function mountTop(current) {
     el('span', { class: 'server', id: 'serverClock' }),
   );
   document.body.prepend(top);
+  if (IS_DEMO) document.body.prepend(el('div', { class: 'demo-banner' }, el('b', {}, '데모 사이트'), ' — 시연·리허설용입니다. 팀 코드는 DEMO-… 로 시작하고, 정답표는 가짜이며, 운영자 관리키는 ', el('code', {}, 'demo'), ' 입니다. 실제 대회 데이터와는 완전히 분리되어 있습니다.'));
 }
 
 /** replaceChildren 인데 null/false/배열을 걸러 준다. */

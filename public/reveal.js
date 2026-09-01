@@ -1,6 +1,6 @@
 /* 결과 발표 화면 — ICPC 리졸버 방식. 동작 설명은 reveal.html 주석에.
    서버가 준 문항별 채점 결과만 그린다. 정답표는 여기 없다. */
-import { api, el, fill, fmtScore, sleep } from './app.js';
+import { api, el, fill, fmtScore, sleep, IS_DEMO } from './app.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -283,7 +283,7 @@ async function load() {
     return;
   }
   if (!b.행?.length) { $('msg').textContent = '순위에 든 팀이 없습니다.'; return; }
-  if (DEMO) $('title').textContent = '결과 발표 · 데모';
+  if (DEMO || IS_DEMO) $('title').textContent = '결과 발표 · 데모';
   prepare(b);
   if (M === 0) { $('msg').textContent = '모든 문항을 전 팀이 맞혀서 열 것이 없습니다.'; return; }
   $('msg').hidden = true;

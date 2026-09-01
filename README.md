@@ -102,3 +102,7 @@ GitHub 대신 메모리 저장소를 쓰고, 정답표는 `test/answer_key.json`
 
 참가자는 대회 시작 시점에 이미 기사 36편을 받아 갖고 있다. 조작 위치는
 `articles/` 어디에도 없고, 정답표는 저장소 B 에만 있다.
+
+## 데모 사이트
+
+같은 코드로 한 벌 더: 화면 scinews-contest-demo.pages.dev(주소에 demo 가 있으면 app.js 가 데모 Worker 로 붙음), Worker `wrangler.demo.toml`(contest-api-demo), 저장소 hisfact/contest-private-demo(가짜 정답표 — `scripts/make-demo-data.mjs` 로 생성). 관리키 `demo`. 자세한 건 시작하기.md 6-2절.

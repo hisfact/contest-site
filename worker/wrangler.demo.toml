@@ -1,0 +1,22 @@
+# 데모 Worker — 발주처 시연·운영 리허설용. 실전 Worker(wrangler.toml)와 코드는 같고 저장소만 다르다.
+#
+#   배포: Cloudflare Workers Builds 에서 프로젝트 하나를 더 만들고
+#         빌드 루트 /worker, 배포 명령 `npx wrangler deploy -c wrangler.demo.toml`
+#   시크릿: GITHUB_TOKEN 만 대시보드에서 넣는다 (contest-private-demo 에 Contents R/W 권한이 있는 토큰).
+#          ADMIN_KEY 는 데모라 아래에 그냥 적는다 — 발주처에 "demo" 라고 알려 준다.
+#
+# 화면(scinews-contest-demo.pages.dev)은 app.js 가 주소에 'demo' 가 있으면 이 Worker 로 붙는다.
+
+name = "contest-api-demo"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+PRIVATE_REPO = "hisfact/contest-private-demo"   # 데모 저장소 — 가짜 정답표, DEMO- 팀 코드
+ANSWER_KEY_PATH = "answer_key.json"
+TEAMS_PATH = "teams.json"
+SET_NAME = "A_데모"
+DEADLINE_ISO = ""                                # 자동 마감 없음. 운영자 화면의 강제 마감/열기로 시연한다
+MAX_ATTEMPTS_1 = "1"
+MAX_ATTEMPTS_2 = "3"
+ADMIN_KEY = "demo"                               # 데모 전용. 실전 Worker 의 관리키와 무관
