@@ -233,7 +233,7 @@ test('리더보드 — 관리키 없이는 못 본다 (GET 도 없다)', async (
   assert.equal((await s.call('/api/board', { 관리키: 'admin-secret' })).status, 200);
 });
 
-test('상태 — 마감 후에는 자기 순위·문항별 정오만 준다', async () => {
+test('상태 — 마감 후에는 자기 점수·문항별 정오만 준다 (순위 없음)', async () => {
   const s = setup();
   await s.call('/api/submit', { 팀코드: 'WXYZWXYZ6789', result: SUB_2 });    // 26.0
   await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_2B });   // 28.0
@@ -244,8 +244,8 @@ test('상태 — 마감 후에는 자기 순위·문항별 정오만 준다', as
   const res = await worker.fetch(new Request('https://api.test/api/status?code=wxyz-wxyz-6789'), closed, { waitUntil() {} });
   const st = await res.json();
   assert.equal(st.마감후, true);
-  assert.equal(st.결과.순위, 2);
-  assert.equal(st.결과.팀수, 2);
+  assert.equal('순위' in st.결과, false); // 순위는 결과 발표에서만
+  assert.equal('팀수' in st.결과, false);
   assert.equal(st.결과.최종점수, 26.0);
   assert.equal(st.결과.채택회차, '2차-1');
   assert.equal(st.결과.문항별.length, 36);

@@ -1,4 +1,4 @@
-/* 내 결과 — /api/status 가 준 우리 팀 것만 그린다. 다른 팀 데이터는 이 화면에 오지 않는다. */
+/* 내 결과 — /api/status 가 준 우리 팀 것만 그린다. 다른 팀 데이터도, 우리 팀 순위도 이 화면에 오지 않는다(순위는 결과 발표에서만). */
 import { api, el, fill, fmtTime, fmtScore, mountTop, remainingText } from './app.js';
 
 mountTop('board.html');
@@ -62,7 +62,7 @@ function renderStatus(st) {
 
 function renderResult(st) {
   if (!st.마감후) {
-    fill($('content'), el('section', { class: 'card' }, el('div', { class: 'alert info', style: 'margin:0' }, '순위와 문항별 정오표는 마감 후에 이 화면에서 볼 수 있습니다. 점수는 위의 회차별 칸에 바로 반영됩니다.')));
+    fill($('content'), el('section', { class: 'card' }, el('div', { class: 'alert info', style: 'margin:0' }, '최종 점수와 문항별 정오표는 마감 후에 이 화면에서 볼 수 있습니다. 회차별 점수는 위 칸에 바로 반영됩니다.')));
     return;
   }
   const r = st.결과;
@@ -73,8 +73,8 @@ function renderResult(st) {
   const summary = el('section', { class: 'card' },
     el('h2', {}, '최종'),
     el('div', { class: 'score' },
-      el('span', { class: 'big' }, `${r.순위}위`), el('span', { class: 'of' }, `/ ${r.팀수}팀`),
-      el('span', { class: 'big', style: 'margin-left:24px' }, fmtScore(r.최종점수)), el('span', { class: 'of' }, '점'),
+      el('span', { class: 'big' }, fmtScore(r.최종점수)), el('span', { class: 'of' }, '점'),
+      el('span', { class: 'muted small', style: 'margin-left:16px' }, '순위는 결과 발표 때 공개됩니다'),
     ),
     el('div', { class: 'kv', style: 'margin-top:14px' },
       el('dt', {}, '채택 회차'), el('dd', {}, `${r.채택회차} · 원점수 ${fmtScore(r.원점수)} × 계수 ${Number(r.계수).toFixed(2)}`),

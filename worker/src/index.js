@@ -3,7 +3,7 @@
  *
  *   POST /api/submit          팀 코드 확인 → 시도 횟수 확인 → 스키마 검증 → 채점 → 저장 → 점수만 반환
  *   GET  /api/status?code=    그 팀의 회차별 제출 여부·점수와 남은 시도 (POST {팀코드} 도 받는다)
- *                             마감 후에는 그 팀의 순위·최종 점수·문항별 정오(결과)도 함께 — 본인 것만
+ *                             마감 후에는 그 팀의 최종 점수·문항별 정오(결과)도 함께 — 본인 것만. 순위는 주지 않는다(결과 발표에서만)
  *   POST /api/board           전체 리더보드 (마감 전 = 진행 현황, 마감 후 = 전체 순위). 관리키 필요. 60초 캐시
  *                             학생에게는 열지 않는다 — 전체 결과는 운영자가 결과 발표 화면(reveal.html)에서만 보여 준다
  *   POST /api/admin/overview  전체 기록                       ┐
@@ -310,7 +310,7 @@ async function handleStatus(rawCode, env, ctx) {
   const n1 = nextRound('1차', record, env);
   const n2 = nextRound('2차', record, env);
 
-  // 마감 후 — 이 팀의 순위와 문항별 정오. 다른 팀 것은 담지 않는다.
+  // 마감 후 — 이 팀의 최종 점수와 문항별 정오. 다른 팀 것도, 이 팀의 순위도 담지 않는다 (순위는 결과 발표에서만 공개).
   let 결과;
   if (dl.마감후) {
     const board = await handleBoard(env, ctx);
@@ -318,10 +318,9 @@ async function handleStatus(rawCode, env, ctx) {
     if (!row) 결과 = null; // 2차 제출이 없어 순위가 없다
     else {
       const byNo = new Map((board.문항 ?? []).map((q) => [q.번호, q]));
-      const { 코드: _c, 회차별: _r, 문항별, ...rest } = row;
+      const { 코드: _c, 회차별: _r, 순위: _rank, 문항별, ...rest } = row;
       결과 = {
         ...rest,
-        팀수: board.행.length,
         문항별: (문항별 ?? []).map((d) => { const q = byNo.get(d.번호) ?? {}; return { 번호: d.번호, 제목: q.제목 ?? '', 정답: q.정답 ?? null, 난이도: q.난이도 ?? null, 유형: q.유형 ?? null, 함정: q.함정 === true, 판정: d.판정, 점수: d.점수, 인용일치: d.인용일치 }; }),
       };
     }

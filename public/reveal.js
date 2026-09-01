@@ -5,11 +5,13 @@ import { api, el, fill, fmtScore, sleep } from './app.js';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEMO = params.has('demo');
+const TOP = Math.max(1, Number(params.get('top')) || 10); // 상위 몇 팀까지 보여 줄지. 기본 10. ?top=20 처럼 바꿀 수 있다
 
 // ────────────────────────────────────────────── 상태
 let Q = [];        // 문항 정보 [{번호, 제목, 정답, 난이도, 유형, 함정, 정답률}]
 let teams = [];    // 발표 대상 팀 (순위 있는 팀). 서버가 준 순위 그대로.
-let unranked = []; // 2차 제출이 없어 순위가 없는 팀
+let unranked = []; // 2차 제출이 없어 순위가 없는 팀 (TOP 안에만 보여 주므로 지금은 쓰지 않는다)
+let hiddenCount = 0; // TOP 밖이라 화면에 안 올린 팀 수
 let order = [];    // 공개 순서: 꼴찌 → 1위
 let N = 36;        // 문항 수
 let PRE = new Set(); // 전 팀이 맞힌 문항(인덱스). 처음부터 열어 둔다 — 클릭해 봐야 순위가 안 바뀌므로
@@ -26,16 +28,18 @@ function prepare(b) {
   Q = b.문항.map((q) => ({ ...q }));
   N = Q.length;
   const byNo = new Map(Q.map((q) => [q.번호, q]));
-  teams = b.행.map((r) => ({
+  hiddenCount = b.행.filter((r) => r.순위 > TOP).length + (b.미채점?.length ?? 0);
+  teams = b.행.filter((r) => r.순위 <= TOP).map((r) => ({
     id: `${r.순위}-${r.팀명}`,
     팀명: r.팀명, 순번: r.순번, 순위: r.순위, 최종점수: r.최종점수, 계수: r.계수 ?? 1, 채택회차: r.채택회차,
     제출시각: Date.parse(r.제출시각) || 0,
     // 001 → 036 순서로 고정. 서버 detail 은 제출 순서지만 같은 순서라 보장은 여기서 한다.
     cells: [...(r.문항별 ?? [])].sort((x, y) => x.번호.localeCompare(y.번호)).map((d) => ({ ...d, 정답: byNo.get(d.번호)?.정답 })),
   }));
-  unranked = (b.미채점 ?? []).map((r) => ({ id: `u-${r.팀명}`, 팀명: r.팀명, 순번: r.순번, unranked: true }));
+  unranked = []; // 상위 TOP 팀만 올린다. 순위 없는 팀·TOP 밖 팀은 화면에 아예 없다.
   order = [...teams].sort((a, b2) => b2.순위 - a.순위); // 꼴찌부터
   // 전 팀이 판정을 맞힌 문항은 처음부터 열어 둔다.
+  // 화면에 올린 팀(상위 TOP) 전부가 판정을 맞힌 문항은 처음부터 열어 둔다.
   PRE = new Set(Q.map((q, i) => i).filter((i) => teams.length && teams.every((t) => t.cells[i] && t.cells[i].판정 === Q[i].정답)));
   STEPS = Q.map((q, i) => i).filter((i) => !PRE.has(i));
   stepPos = Q.map((q, i) => STEPS.indexOf(i));
@@ -79,7 +83,7 @@ const cellTitle = (c) => `${c.번호} · 정답 ${c.정답} / 판정 ${c.판정}
 function buildRows() {
   $('board').style.setProperty('--n', N);
   fill($('head'), el('div'),
-    el('div', { class: 'muted small' }, `${N}문항 · 001 → ${Q.at(-1)?.번호 ?? ''}`, PRE.size ? el('br') : null, PRE.size ? `전 팀 정답 ${PRE.size}문항은 열어 둠` : null),
+    el('div', { class: 'muted small' }, `상위 ${teams.length}팀 · ${N}문항`, hiddenCount ? ` (${hiddenCount}팀은 표시하지 않음)` : '', PRE.size ? el('br') : null, PRE.size ? `상위 ${teams.length}팀 모두 정답인 ${PRE.size}문항은 열어 둠` : null),
     el('div', { class: 'cells' }, Q.map((q, i) => el('div', { class: PRE.has(i) ? 'c pre' : 'c', title: PRE.has(i) ? `${q.제목} — 전 팀 정답, 처음부터 공개` : q.제목 }, q.번호.replace(/^0+/, '')))),
     el('div', { class: 'right muted small' }, '누적'));
   rowsById.clear();
@@ -163,7 +167,7 @@ function render({ animate = true, opened = null } = {}) {
   // 4) 배너·진행
   renderBanner(opened, finished, st);
   const ti = Math.min(order.length, Math.floor(step / M) + (finished ? 0 : 1));
-  fill($('progress'), finished ? el('strong', {}, '최종 순위 확정') : [el('strong', {}, cur?.팀명 ?? ''), ` · 팀 ${ti}/${order.length} · 문항 ${step % M}/${M}`]);
+  fill($('progress'), finished ? el('strong', {}, `최종 순위 확정 (상위 ${order.length}팀)`) : [el('strong', {}, cur?.팀명 ?? ''), ` · 팀 ${ti}/${order.length} · 문항 ${step % M}/${M}`]);
   $('btnPrev').disabled = step === 0;
   $('btnNext').disabled = finished;
   $('btnTeam').disabled = finished;
@@ -279,10 +283,10 @@ async function load() {
     return;
   }
   if (!b.행?.length) { $('msg').textContent = '순위에 든 팀이 없습니다.'; return; }
+  if (DEMO) $('title').textContent = '결과 발표 · 데모';
   prepare(b);
   if (M === 0) { $('msg').textContent = '모든 문항을 전 팀이 맞혀서 열 것이 없습니다.'; return; }
   $('msg').hidden = true;
-  if (DEMO) $('title').textContent = '결과 발표 · 데모';
   buildRows();
   render({ animate: false });
   // 검증용: 전부 열었을 때의 순서가 서버 순위와 같은지. 콘솔에만 찍는다.
