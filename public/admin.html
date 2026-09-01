@@ -17,6 +17,7 @@
     - 제출 현황 한눈에 보기 (점수 포함 — 운영자만)                  → POST /api/admin/overview
     - 마감 수동 전환 (강제 마감 / 강제 열기 / 자동)                 → POST /api/admin/deadline
     - 특정 팀 재제출 허용 (사고 대응) — 한 회차를 취소해 칸을 다시 연다 → POST /api/admin/reopen
+    - 시스템 초기화 — 제출 기록 전부와 강제 마감 상태를 지운다 (테스트 뒤 / 재대회)   → POST /api/admin/reset
 -->
 <main class="wide">
   <h1>운영자</h1>
@@ -60,6 +61,19 @@
       <p class="muted small" id="overviewMeta"></p>
       <div class="tablewrap" id="overview"></div>
       <p class="muted small">각 칸의 <b>취소</b>는 그 회차 기록을 취소 목록으로 옮기고 칸을 다시 엽니다. 팀이 잘못된 파일을 낸 사고에만 쓰세요. 기록은 지워지지 않습니다.</p>
+    </section>
+
+    <section class="card" id="resetCard" style="border-color:var(--bad)">
+      <h2 style="color:var(--bad)">시스템 초기화</h2>
+      <p class="muted small">테스트가 끝났거나 대회를 처음부터 다시 돌릴 때 씁니다. <b>모든 팀의 제출 기록(1차·2차 전부)</b>과 취소 목록, 강제 마감/열기 상태를 지웁니다. 정답표와 팀 코드 명부는 그대로 두고, 팀명·이메일은 아래 체크했을 때만 비웁니다. 지운 기록은 저장소 이력에 남아 있어 되살릴 수는 있지만, 화면에서는 되돌릴 수 없습니다.</p>
+      <div class="row" style="margin-top:6px">
+        <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="resetNames"> 팀명·이메일도 비우기</label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="resetConfirm" placeholder='확인을 위해 "초기화" 입력' autocomplete="off" style="max-width:260px">
+        <button class="danger" id="resetBtn" disabled>초기화 실행</button>
+        <span class="muted small" id="resetMsg"></span>
+      </div>
     </section>
   </div>
 </main>

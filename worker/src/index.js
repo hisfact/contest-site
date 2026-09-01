@@ -9,7 +9,8 @@
  *   POST /api/admin/overview  전체 기록                       ┐
  *   POST /api/admin/teams     팀명 일괄 입력                   │ 본문에 관리키 필요
  *   POST /api/admin/deadline  마감 강제 전환 (true/false/null) │
- *   POST /api/admin/reopen    특정 팀의 한 회차를 취소해 다시 낼 수 있게 함 ┘
+ *   POST /api/admin/reopen    특정 팀의 한 회차를 취소해 다시 낼 수 있게 함 │
+ *   POST /api/admin/reset     시스템 초기화 — 제출 기록 전부·state.json 삭제 (확인:"초기화" 필요) ┘
  *
  * 절대 어기지 말 것
  *   1. 정답표를 응답에 담지 않는다. 문항별 정오도 마감 전에는 담지 않는다.
@@ -145,6 +146,17 @@ async function ghPut(env, path, obj, sha, message) {
   });
   if (r.status === 409 || r.status === 422) throw fail(409, '같은 팀의 제출이 동시에 들어왔습니다. 잠시 후 다시 시도하세요.');
   if (!r.ok) throw fail(502, `GitHub 쓰기 실패 ${r.status} (${path})`);
+}
+
+/** 파일 삭제. 없으면 그냥 넘어간다. (git 이력에는 남는다) */
+async function ghDelete(env, path, sha, message) {
+  const r = await fetch(`${GH}/repos/${env.PRIVATE_REPO}/contents/${path}`, {
+    method: 'DELETE',
+    headers: ghHeaders(env, { 'content-type': 'application/json' }),
+    body: JSON.stringify({ message, sha }),
+  });
+  if (r.status === 404) return;
+  if (!r.ok) throw fail(502, `GitHub 삭제 실패 ${r.status} (${path})`);
 }
 
 // ────────────────────────────────────────────── 공통
@@ -529,6 +541,31 @@ async function handleAdmin(action, body, env) {
     await ghPut(env, file, record, existing.sha, `취소 ${code} ${round}`);
     await purgeBoardCache();
     return { 코드: code, 취소한회차: round, 남은시도: nextRound(phaseOf(round), record, env).remaining, 다음회차: { '1차': nextRound('1차', record, env).round, '2차': nextRound('2차', record, env).round } };
+  }
+
+  if (action === 'reset') {
+    // 시스템 초기화 — 테스트가 끝났거나 대회를 다시 돌릴 때. 제출 기록(teams/*.json)과 강제 마감 상태(state.json)를 지운다.
+    // 정답표와 팀 명부는 건드리지 않는다. 팀명 비우기는 따로 요청(팀명비우기: true)해야 한다.
+    // 실수 방지: 본문에 확인: "초기화" 가 있어야 한다. 지운 파일은 git 이력에 남으므로 되살릴 수는 있다.
+    if (body.확인 !== '초기화') throw fail(400, '확인란에 "초기화" 라고 적어야 합니다.');
+    const names = await ghList(env, 'teams');
+    const deleted = [];
+    for (const n of names) { // 순서대로 — 동시에 지우면 ref 갱신이 충돌한다
+      const f = await ghGet(env, `teams/${n}`);
+      if (!f) continue;
+      await ghDelete(env, `teams/${n}`, f.sha, `초기화: ${n} 삭제`);
+      deleted.push(n.replace(/\.json$/, ''));
+    }
+    const st = await ghGet(env, STATE_PATH);
+    if (st) await ghDelete(env, STATE_PATH, st.sha, '초기화: state.json 삭제');
+    let cleared = 0;
+    if (body.팀명비우기 === true) {
+      const teams = await loadTeams(env);
+      for (const e of Object.values(teams.data.팀 ?? {})) { if (e.팀명 || e.이메일) cleared++; e.팀명 = ''; delete e.이메일; }
+      if (cleared) await ghPut(env, env.TEAMS_PATH, teams.data, teams.sha, '초기화: 팀명·이메일 비움');
+    }
+    await purgeBoardCache();
+    return { 삭제한제출: deleted, 마감상태삭제: !!st, 팀명비움: cleared, 현재: await deadlineInfo(env), 서버시각: new Date().toISOString() };
   }
 
   throw fail(404, `알 수 없는 운영 동작: ${action}`);

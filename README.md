@@ -93,6 +93,7 @@ GitHub 대신 메모리 저장소를 쓰고, 정답표는 `test/answer_key.json`
 | `/api/admin/teams` | POST `{관리키, 항목:[{코드,팀명}]}` | 팀명 일괄 입력 |
 | `/api/admin/deadline` | POST `{관리키, 마감: true/false/null}` | 강제 마감 / 강제 열기 / 자동 |
 | `/api/admin/reopen` | POST `{관리키, 코드, 회차, 사유}` | 한 회차 기록을 취소하고 그 칸을 다시 연다 |
+| `/api/admin/reset` | POST `{관리키, 확인: "초기화", 팀명비우기?}` | 시스템 초기화 — 제출 기록 전부·state.json 삭제. 정답표·명부는 유지 (팀명은 옵션) |
 
 오류는 `{ error, detail? }` 로 온다. 형식 오류는 400 에 `detail` 배열, 시도 소진은 429, 마감·미등록 코드는 403,
 같은 팀의 동시 제출 충돌은 409 (기록되지 않았으니 다시 내면 된다).

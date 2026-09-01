@@ -33,6 +33,14 @@ export function fakeGitHub(initial = {}) {
       store.set(path, { content: decodeUtf8Base64(body.content), sha: `sha${++counter}` });
       return Response.json({ content: { sha: `sha${counter}` } });
     }
+    if (method === 'DELETE') {
+      const body = JSON.parse(init.body);
+      const cur = store.get(path);
+      if (!cur) return new Response('{}', { status: 404 });
+      if (cur.sha !== body.sha) return new Response('{}', { status: 409 });
+      store.delete(path);
+      return Response.json({ content: null });
+    }
     return new Response('no', { status: 405 });
   };
   return { store, log, fetchImpl, put, get: (p) => JSON.parse(store.get(p).content) };

@@ -175,6 +175,29 @@ $('downloadBtn').addEventListener('click', async () => {
 
 // ────────────────────────────────────────────── 작은 도우미 (브라우저 confirm 대신 인라인)
 
+// ────────────────────────────────────────────── 시스템 초기화
+
+$('resetConfirm').addEventListener('input', () => { $('resetBtn').disabled = $('resetConfirm').value.trim() !== '초기화'; });
+$('resetBtn').addEventListener('click', async () => {
+  const names = $('resetNames').checked;
+  const n = overview ? Object.values(overview.팀).filter((t) => Object.keys(t.제출 ?? {}).length).length : '?';
+  const ok = await inlineConfirm($('resetCard'), `제출 기록이 있는 팀 ${n}개의 기록을 전부 지웁니다${names ? ' (팀명·이메일도 비웁니다)' : ''}. 정말 실행할까요?`);
+  if (!ok) return;
+  $('resetBtn').disabled = true;
+  $('resetMsg').textContent = '지우는 중… (팀마다 한 번씩 저장소에 쓰므로 수십 초 걸릴 수 있습니다)';
+  try {
+    const r = await admin('reset', { 확인: '초기화', 팀명비우기: names });
+    $('resetMsg').textContent = `완료 — 제출 기록 ${r.삭제한제출.length}팀분 삭제` + (r.마감상태삭제 ? ', 강제 마감 상태 해제' : '') + (r.팀명비움 ? `, 팀명 ${r.팀명비움}건 비움` : '') + ` (${fmtTime(r.서버시각)})`;
+    $('resetConfirm').value = '';
+    $('resetNames').checked = false;
+    await load();
+  } catch (e) {
+    $('resetMsg').textContent = '';
+    alertBox($('resetCard'), e.message);
+    $('resetBtn').disabled = $('resetConfirm').value.trim() !== '초기화';
+  }
+});
+
 function inlineConfirm(anchor, message) {
   return new Promise((resolve) => {
     const box = el('div', { class: 'alert warn', style: 'width:100%' }, el('div', {}, message),

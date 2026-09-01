@@ -257,6 +257,33 @@ test('상태 — 마감 후에는 자기 순위·문항별 정오만 준다', as
   assert.equal(text.includes('회차별'), false);
 });
 
+test('운영자 — 시스템 초기화는 제출·state 를 지우고 명부·정답표는 남긴다', async () => {
+  const s = setup(makeEnv(), { 'state.json': { 마감: false } });
+  await s.call('/api/submit', { 팀코드: 'WXYZWXYZ6789', result: SUB_2 });
+  await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_1 });
+  await s.call('/api/admin/teams', { 관리키: 'admin-secret', 항목: [{ 코드: 'ABCDEFGH2345', 팀명: '임시팀', 이메일: 'a@b.c' }] });
+  assert.equal((await s.call('/api/admin/reset', { 관리키: 'admin-secret' })).status, 400); // 확인 없음
+  assert.equal((await s.call('/api/admin/reset', { 관리키: 'wrong', 확인: '초기화' })).status, 401);
+  const r = await s.call('/api/admin/reset', { 관리키: 'admin-secret', 확인: '초기화' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([...r.body.삭제한제출].sort(), ['ABCDEFGH2345', 'WXYZWXYZ6789']);
+  assert.equal(r.body.마감상태삭제, true);
+  assert.equal(r.body.팀명비움, 0);
+  assert.equal(s.gh.store.has('teams/ABCDEFGH2345.json'), false);
+  assert.equal(s.gh.store.has('state.json'), false);
+  assert.equal(s.gh.store.has('answer_key.json'), true);
+  assert.equal(s.gh.get('teams.json').팀.ABCDEFGH2345.팀명, '임시팀'); // 팀명은 요청해야 비운다
+  const b = await s.call('/api/board', { 관리키: 'admin-secret' });
+  assert.equal(b.body.제출건수, 0);
+  // 다시 제출할 수 있다
+  assert.equal((await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_1 })).status, 200);
+  // 팀명까지
+  const r2 = await s.call('/api/admin/reset', { 관리키: 'admin-secret', 확인: '초기화', 팀명비우기: true });
+  assert.equal(r2.body.팀명비움, 2); // 임시팀 + 명부에 원래 있던 별똥별
+  assert.equal(s.gh.get('teams.json').팀.ABCDEFGH2345.팀명, '');
+  assert.equal('이메일' in s.gh.get('teams.json').팀.ABCDEFGH2345, false);
+});
+
 test('리더보드 — 강제 마감(state.json)이 DEADLINE_ISO 보다 우선한다', async () => {
   const s = setup(makeEnv(), { 'state.json': { 마감: true } });
   const b = await s.call('/api/board', { 관리키: 'admin-secret' });
