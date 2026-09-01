@@ -12,7 +12,11 @@ let teams = [];    // 발표 대상 팀 (순위 있는 팀). 서버가 준 순�
 let unranked = []; // 2차 제출이 없어 순위가 없는 팀
 let order = [];    // 공개 순서: 꼴찌 → 1위
 let N = 36;        // 문항 수
-let step = 0;      // 0 … order.length * N. 팀 i 의 문항 k 까지 열린 상태 = i*N + k
+let PRE = new Set(); // 전 팀이 맞힌 문항(인덱스). 처음부터 열어 둔다 — 클릭해 봐야 순위가 안 바뀌므로
+let STEPS = [];    // 클릭으로 여는 문항 인덱스, 001 → 036 순
+let stepPos = [];  // 문항 인덱스 → STEPS 안의 위치 (-1 = 처음부터 열림)
+let M = 36;        // 팀당 클릭 수 = STEPS.length
+let step = 0;      // 0 … order.length * M. 팀 i 의 STEPS k 개까지 열린 상태 = i*M + k
 let playing = false;
 let lastPos = new Map(); // 팀 id → 직전 화면 위치(0부터). 순위 변동 화살표용
 let rowsById = new Map();
@@ -31,12 +35,19 @@ function prepare(b) {
   }));
   unranked = (b.미채점 ?? []).map((r) => ({ id: `u-${r.팀명}`, 팀명: r.팀명, 순번: r.순번, unranked: true }));
   order = [...teams].sort((a, b2) => b2.순위 - a.순위); // 꼴찌부터
+  // 전 팀이 판정을 맞힌 문항은 처음부터 열어 둔다.
+  PRE = new Set(Q.map((q, i) => i).filter((i) => teams.length && teams.every((t) => t.cells[i] && t.cells[i].판정 === Q[i].정답)));
+  STEPS = Q.map((q, i) => i).filter((i) => !PRE.has(i));
+  stepPos = Q.map((q, i) => STEPS.indexOf(i));
+  M = STEPS.length;
 }
+const isOpen = (i, k) => PRE.has(i) || (stepPos[i] >= 0 && stepPos[i] < k);
 
 /** 팀의 지금 상태 — k개 열린 시점의 누적치. 정렬 기준은 scoring.js compareTeams 와 같다. */
 function partial(t, k) {
   let raw = 0, quotes = 0, fp = 0;
-  for (let i = 0; i < k; i++) {
+  for (let i = 0; i < N; i++) {
+    if (!isOpen(i, k)) continue;
     const c = t.cells[i];
     raw += c.점수;
     if (c.인용일치 === true) quotes++;
@@ -45,23 +56,20 @@ function partial(t, k) {
   const score = Math.round(raw * t.계수 * 100) / 100;
   return { raw, score, quotes, fp };
 }
-const cmp = (a, b) => (b.p.score - a.p.score) || (b.p.quotes - a.p.quotes) || (a.p.fp - b.p.fp) || (a.t.제출시각 - b.t.제출시각);
+const cmp = (a, b) => (b.p.score - a.p.score) || (b.p.quotes - a.p.quotes) || (a.p.fp - b.p.fp) || (a.t.제출시각 - b.t.제출시각) || ((a.t.순번 ?? 0) - (b.t.순번 ?? 0));
 
-/** step 에서 각 팀이 몇 문항 열렸는지 */
+/** step 에서 각 팀이 클릭 문항을 몇 개 열었는지 (처음부터 열린 문항은 세지 않는다) */
 function openedOf(t) {
   const i = order.indexOf(t);
-  const cur = Math.floor(step / N);
-  if (i < cur) return N;
-  if (i === cur) return step % N;
+  const cur = Math.floor(step / M);
+  if (i < cur) return M;
+  if (i === cur) return step % M;
   return 0;
 }
 
-/** 화면 순서: 공개된 팀(점수순) → 아직 안 연 팀(순번순) → 순위 없는 팀 */
+/** 화면 순서: 지금까지 열린 것만으로 매긴 점수순. ICPC 처럼 아직 안 연 팀도 같은 표 안에서 섞여 있다. */
 function standings() {
-  const st = teams.map((t) => { const k = openedOf(t); return { t, k, p: partial(t, k) }; });
-  const shown = st.filter((s) => s.k > 0).sort(cmp);
-  const hidden = st.filter((s) => s.k === 0).sort((a, b) => (a.t.순번 ?? 0) - (b.t.순번 ?? 0));
-  return [...shown, ...hidden];
+  return teams.map((t) => { const k = openedOf(t); return { t, k, p: partial(t, k) }; }).sort(cmp);
 }
 
 // ────────────────────────────────────────────── 그리기
@@ -70,7 +78,10 @@ const cellTitle = (c) => `${c.번호} · 정답 ${c.정답} / 판정 ${c.판정}
 
 function buildRows() {
   $('board').style.setProperty('--n', N);
-  fill($('head'), el('div'), el('div', { class: 'muted small' }, `${N}문항 · 001 → ${Q.at(-1)?.번호 ?? ''}`), el('div', { class: 'cells' }, Q.map((q) => el('div', { class: 'c', title: q.제목 }, q.번호.replace(/^0+/, '')))), el('div', { class: 'right muted small' }, '누적'));
+  fill($('head'), el('div'),
+    el('div', { class: 'muted small' }, `${N}문항 · 001 → ${Q.at(-1)?.번호 ?? ''}`, PRE.size ? el('br') : null, PRE.size ? `전 팀 정답 ${PRE.size}문항은 열어 둠` : null),
+    el('div', { class: 'cells' }, Q.map((q, i) => el('div', { class: PRE.has(i) ? 'c pre' : 'c', title: PRE.has(i) ? `${q.제목} — 전 팀 정답, 처음부터 공개` : q.제목 }, q.번호.replace(/^0+/, '')))),
+    el('div', { class: 'right muted small' }, '누적'));
   rowsById.clear();
   const make = (t) => {
     const row = el('div', { class: 'rrow team', dataset: { id: t.id } },
@@ -89,8 +100,8 @@ function buildRows() {
 /** step 에 맞게 전부 다시 그린다. animate=true 면 행 이동·셀 팝 애니메이션. */
 function render({ animate = true, opened = null } = {}) {
   const st = standings();
-  const cur = order[Math.floor(step / N)] ?? null;
-  const finished = step >= order.length * N;
+  const cur = order[Math.floor(step / M)] ?? null;
+  const finished = step >= order.length * M;
   const rows = $('rows');
 
   // 1) 위치 기억 (FLIP)
@@ -100,18 +111,18 @@ function render({ animate = true, opened = null } = {}) {
   // 2) 내용 갱신
   st.forEach((s, idx) => {
     const row = rowsById.get(s.t.id);
-    const done = s.k >= N;
+    const done = s.k >= M;
     row.className = ['rrow team', s.k === 0 ? 'hidden-team' : '', s.t === cur && !finished ? 'cur' : '', done ? 'done' : '', finished && idx < 3 ? `medal${idx + 1}` : ''].filter(Boolean).join(' ');
-    row.querySelector('.rank .n').textContent = s.k > 0 ? String(idx + 1) : '';
+    row.querySelector('.rank .n').textContent = String(idx + 1);
     const coef = s.t.계수 !== 1 ? ` · 원점수 ${fmtScore(s.p.raw)} × ${s.t.계수.toFixed(2)}` : '';
-    row.querySelector('.name .sub').textContent = done ? `${s.t.채택회차} 채택${coef} · 인용일치 ${s.p.quotes} · 오탐 ${s.p.fp}` : s.k > 0 ? `${s.k}/${N} 문항${coef} · 인용일치 ${s.p.quotes} · 오탐 ${s.p.fp}` : '아직 공개 전';
+    row.querySelector('.name .sub').textContent = done ? `${s.t.채택회차} 채택${coef} · 인용일치 ${s.p.quotes} · 오탐 ${s.p.fp}` : s.k > 0 ? `${s.k}/${M} 문항${coef} · 인용일치 ${s.p.quotes} · 오탐 ${s.p.fp}` : (PRE.size ? `전 팀 정답 ${PRE.size}문항만 열림${coef}` : '아직 공개 전');
     const val = row.querySelector('.score .val');
-    const txt = s.k > 0 ? fmtScore(s.p.score) : '—';
+    const txt = fmtScore(s.p.score);
     if (val.textContent !== txt) { val.textContent = txt; if (animate) { val.classList.remove('bump'); void val.offsetWidth; val.classList.add('bump'); } }
     const cells = row.querySelectorAll('.cells .c');
     s.t.cells.forEach((c, i) => {
       const n = cells[i];
-      const on = i < s.k;
+      const on = isOpen(i, s.k);
       const [cls, mark] = on ? CELL(c) : ['', ''];
       const want = `c ${cls}` + (on && opened && opened.t === s.t && opened.i === i ? ' pop now' : '');
       if (n.className !== want) n.className = want;
@@ -121,7 +132,7 @@ function render({ animate = true, opened = null } = {}) {
     // 순위 변동 화살표
     const d = row.querySelector('.rank .d');
     const prev = lastPos.get(s.t.id);
-    if (animate && s.k > 0 && prev !== undefined && prev !== idx) {
+    if (animate && prev !== undefined && prev !== idx) {
       const up = idx < prev;
       d.replaceChildren(el('span', { class: `delta ${up ? '' : 'down'}` }, `${up ? '▲' : '▼'}${Math.abs(prev - idx)}`));
     } else if (!animate) d.replaceChildren();
@@ -151,8 +162,8 @@ function render({ animate = true, opened = null } = {}) {
 
   // 4) 배너·진행
   renderBanner(opened, finished, st);
-  const ti = Math.min(order.length, Math.floor(step / N) + (finished ? 0 : 1));
-  fill($('progress'), finished ? el('strong', {}, '최종 순위 확정') : [el('strong', {}, cur?.팀명 ?? ''), ` · 팀 ${ti}/${order.length} · 문항 ${step % N}/${N}`]);
+  const ti = Math.min(order.length, Math.floor(step / M) + (finished ? 0 : 1));
+  fill($('progress'), finished ? el('strong', {}, '최종 순위 확정') : [el('strong', {}, cur?.팀명 ?? ''), ` · 팀 ${ti}/${order.length} · 문항 ${step % M}/${M}`]);
   $('btnPrev').disabled = step === 0;
   $('btnNext').disabled = finished;
   $('btnTeam').disabled = finished;
@@ -193,24 +204,24 @@ function renderBanner(opened, finished, st) {
 }
 
 // ────────────────────────────────────────────── 조작
-const total = () => order.length * N;
+const total = () => order.length * M;
+const openedAt = (s) => (s > 0 ? { t: order[Math.floor((s - 1) / M)], i: STEPS[(s - 1) % M] } : null); // s번째 클릭에서 열린 셀
 
 function next() {
   if (step >= total()) return false;
   step++;
-  const i = Math.floor((step - 1) / N);
-  render({ opened: { t: order[i], i: (step - 1) % N } });
+  render({ opened: openedAt(step) });
   return true;
 }
 function prev() {
   playing = false;
   if (step === 0) return;
   step--;
-  render({ animate: true, opened: step % N ? { t: order[Math.floor((step - 1) / N)], i: (step - 1) % N } : null });
+  render({ animate: true, opened: step % M ? openedAt(step) : null });
 }
 async function finishTeam() {
   if (playing) { playing = false; return; }
-  const end = (Math.floor(step / N) + 1) * N;
+  const end = (Math.floor(step / M) + 1) * M;
   playing = true; render({ animate: false, opened: null });
   while (playing && step < Math.min(end, total())) { next(); await sleep(70); }
   playing = false; render({ animate: false, opened: null });
@@ -220,7 +231,7 @@ async function autoPlay() {
   playing = true; render({ animate: false });
   while (playing && step < total()) {
     next();
-    await sleep(step % N === 0 ? 1600 : 260); // 팀이 끝나면 잠깐 멈춰서 확정 순위를 보여준다
+    await sleep(step % M === 0 ? 1600 : 260); // 팀이 끝나면 잠깐 멈춰서 확정 순위를 보여준다
   }
   playing = false; render({ animate: false });
 }
@@ -265,6 +276,7 @@ async function main() {
   }
   if (!b.행?.length) { $('msg').textContent = '순위에 든 팀이 없습니다.'; return; }
   prepare(b);
+  if (M === 0) { $('msg').textContent = '모든 문항을 전 팀이 맞혀서 열 것이 없습니다.'; return; }
   $('msg').hidden = true;
   if (DEMO) $('title').textContent = '결과 발표 · 데모';
   buildRows();
@@ -275,7 +287,7 @@ async function main() {
   step = saved;
   const ok = finalOrder.every((r, i) => r === i + 1);
   console[ok ? 'log' : 'warn']('[reveal] 최종 순서 검증', ok ? '일치' : '불일치', finalOrder);
-  window.__reveal = { get step() { return step; }, set step(v) { step = v; render({ animate: false }); }, standings, order, total, next, prev, ok };
+  window.__reveal = { get step() { return step; }, set step(v) { step = v; render({ animate: false }); }, standings, order, total, next, prev, ok, PRE: [...PRE], M };
 }
 main();
 
@@ -297,9 +309,11 @@ function demoBoard() {
     const round = pick(['2차-1', '2차-1', '2차-2', '2차-3']);
     const 계수 = { '2차-1': 1, '2차-2': 0.95, '2차-3': 0.9 }[round];
     let raw = 0, 적발 = 0, 인용일치 = 0, 오탐 = 0, 판단불가 = 0;
-    const 문항별 = 문항.map((q) => {
+    const EASY = new Set([1, 4, 9, 15, 22, 30]); // 전 팀이 맞히는 문항 — 처음부터 열리는 것을 보여 주려고
+    const 문항별 = 문항.map((q, qi) => {
       let 판정, 점수 = 0, quote = null;
-      if (rnd() < 0.06) { 판정 = '판단 불가'; 점수 = 0.25; 판단불가++; }
+      if (EASY.has(qi)) { 판정 = q.정답; 점수 = 1; quote = q.정답 === '가짜' ? true : null; if (q.정답 === '가짜') { 적발++; 인용일치++; } }
+      else if (rnd() < 0.06) { 판정 = '판단 불가'; 점수 = 0.25; 판단불가++; }
       else if (q.정답 === '가짜') {
         if (rnd() < skill) { 판정 = '가짜'; 적발++; quote = q.유형 === '자유' ? true : rnd() < skill; 점수 = quote ? 1 : 0.5; if (quote) 인용일치++; }
         else { 판정 = '진짜'; 점수 = 0; }

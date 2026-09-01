@@ -62,9 +62,11 @@ body.reveal {
 }
 .rrow.head { position: sticky; top: 0; z-index: 2; background: var(--bg); color: var(--muted); font-size: 11px; padding-top: 2px; padding-bottom: 2px; }
 .rrow.head .cells .c { background: transparent; color: var(--muted); font-family: var(--mono); font-weight: 500; }
+.rrow.head .cells .c.pre { color: var(--full); text-decoration: underline dotted; }
 .rrow.team { background: var(--card); margin-top: 3px; }
 .rrow.team:hover { background: #1b2130; }
-.rrow.team.hidden-team { opacity: 0.55; }
+.rrow.team.hidden-team { opacity: 0.6; }
+.hidden-team .cells .c.full, .hidden-team .cells .c.half { filter: saturate(0.6); }
 .rrow.team.cur { border-color: var(--cursor); background: var(--cursor-bg); opacity: 1; }
 .rrow.team.done { opacity: 1; }
 .rrow.team.unranked { opacity: 0.4; }
@@ -102,7 +104,7 @@ body.reveal {
 .score .val { font-size: 22px; font-weight: 800; line-height: 1.1; }
 .score .val.bump { animation: bump .35s ease-out; }
 .score .sub { font-size: 11px; color: var(--muted); }
-.hidden-team .score .val { color: var(--muted); font-weight: 500; }
+.hidden-team .score .val { color: var(--muted); font-weight: 600; }
 
 /* 하단 조작 바 */
 .stage-bar {
