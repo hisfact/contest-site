@@ -1,14 +1,14 @@
 /* 데모 사이트 입력칸 견본 — make-demo-data.mjs 가 만든다. 손으로 고치지 말 것.
    가짜 정답표(contest-private-demo)에 맞춘 2차-1 제출본. 기사 문장만 들어 있어 실제 정답과 무관하다. */
-export const DEMO_TEAM_CODE = "DEMO-XB2V-24DD";        // 제출 시연용 (제출 기록 없음)
+export const DEMO_TEAM_CODE = "DEMO-KQ7R-NZFG";        // 제출 시연용 (오차범위 — 1차·2차-1 기록 있음, 2차-2 를 낸다)
 export const DEMO_RESULT_CODE = "DEMO-EDWX-W62Z";      // 내 결과 시연용 (1차·2차 기록 있음)
 export const DEMO_ADMIN_KEY = 'demo';
 export const DEMO_TEAM_LINES = "DEMO-XB2V-24DD\t카이제곱\troom13@example.com\nDEMO-RTHE-UGPV\tp값사냥꾼\troom14@example.com\nDEMO-2P3E-439D\t유의수준\troom15@example.com";
 export default {
  "meta": {
-  "참가자ID": "DEMO-XB2V-24DD",
+  "참가자ID": "DEMO-KQ7R-NZFG",
   "세트": "A",
-  "조건": "2차-1",
+  "조건": "2차-2",
   "웹검색": false,
   "모델": "Solar Pro 4",
   "지침원문": "숫자·단위·인과·출처를 항목별로 점검하고 확신이 없으면 판단 불가"
