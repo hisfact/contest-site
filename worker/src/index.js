@@ -138,15 +138,31 @@ async function ghList(env, dir) {
   return Array.isArray(j) ? j.filter((e) => e.type === 'file' && e.name.endsWith('.json')).map((e) => e.name) : [];
 }
 
-/** 파일 쓰기. sha 가 어긋나면(동시 수정) 409. */
+/**
+ * 파일 쓰기.
+ *
+ * GitHub Contents API 는 서로 다른 파일이라도 같은 브랜치에 동시에 커밋이 들어오면 409/422 를 돌려준다
+ * (브랜치 참조 갱신 경쟁). 2026-09-01 데모 사이트에서 30팀 동시 제출을 돌려 보니 2건만 성공하고 25건이 409 였다.
+ * 그래서 파일 sha 가 그대로인(= 다른 팀과의 경쟁일 뿐인) 경우에는 잠깐 쉬었다가 다시 시도한다.
+ * 파일 sha 자체가 바뀌었으면(= 같은 팀이 동시에 냈으면) 진짜 충돌이므로 409 로 돌려준다.
+ */
+const PUT_RETRIES = 6;
 async function ghPut(env, path, obj, sha, message) {
-  const r = await fetch(`${GH}/repos/${env.PRIVATE_REPO}/contents/${path}`, {
-    method: 'PUT',
-    headers: ghHeaders(env, { 'content-type': 'application/json' }),
-    body: JSON.stringify({ message, content: encodeUtf8Base64(JSON.stringify(obj, null, 1)), ...(sha ? { sha } : {}) }),
-  });
-  if (r.status === 409 || r.status === 422) throw fail(409, '같은 팀의 제출이 동시에 들어왔습니다. 잠시 후 다시 시도하세요.');
-  if (!r.ok) throw fail(502, `GitHub 쓰기 실패 ${r.status} (${path})`);
+  const body = JSON.stringify({ message, content: encodeUtf8Base64(JSON.stringify(obj, null, 1)), ...(sha ? { sha } : {}) });
+  for (let attempt = 0; ; attempt++) {
+    const r = await fetch(`${GH}/repos/${env.PRIVATE_REPO}/contents/${path}`, {
+      method: 'PUT',
+      headers: ghHeaders(env, { 'content-type': 'application/json' }),
+      body,
+    });
+    if (r.ok) return;
+    if (r.status !== 409 && r.status !== 422) throw fail(502, `GitHub 쓰기 실패 ${r.status} (${path})`);
+    // 충돌 — 이 파일이 그새 바뀌었나? (같은 팀 동시 제출) 아니면 브랜치 경쟁일 뿐인가?
+    const cur = await ghGet(env, path);
+    const changed = (cur?.sha ?? null) !== (sha ?? null);
+    if (changed || attempt >= PUT_RETRIES) throw fail(409, '같은 팀의 제출이 동시에 들어왔습니다. 잠시 후 다시 시도하세요.');
+    await new Promise((res) => setTimeout(res, 250 * (attempt + 1) + Math.random() * 500));
+  }
 }
 
 /** 파일 삭제. 없으면 그냥 넘어간다. (git 이력에는 남는다) */

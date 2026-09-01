@@ -292,6 +292,35 @@ test('운영자 — 시스템 초기화는 제출·state 를 지우고 명부·�
   assert.equal('이메일' in s.gh.get('teams.json').팀.ABCDEFGH2345, false);
 });
 
+test('저장 — 브랜치 경쟁(다른 팀 파일 커밋 중) 409 는 재시도해서 성공한다', async () => {
+  const s = setup();
+  // 처음 두 번의 PUT 을 409 로 튕기는 GitHub 흉내. 파일 sha 는 그대로다 (= 같은 팀 충돌이 아니다).
+  const real = s.gh.fetchImpl; let rejected = 0;
+  globalThis.fetch = async (url, init = {}) => {
+    if (init.method === 'PUT' && rejected < 2) { rejected++; return new Response('{}', { status: 409 }); }
+    return real(url, init);
+  };
+  const t0 = Date.now();
+  const r = await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_1 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(rejected, 2);
+  assert.ok(Date.now() - t0 >= 400, '재시도 사이에 잠깐 쉬어야 한다');
+  assert.ok(s.gh.store.has('teams/ABCDEFGH2345.json'));
+});
+
+test('저장 — 같은 팀이 동시에 내서 파일 sha 가 바뀐 경우는 재시도하지 않고 409', async () => {
+  const s = setup();
+  await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_1 });
+  const real = s.gh.fetchImpl; let puts = 0;
+  globalThis.fetch = async (url, init = {}) => {
+    if (init.method === 'PUT') { puts++; if (puts === 1) { s.gh.put('teams/ABCDEFGH2345.json', s.gh.get('teams/ABCDEFGH2345.json')); return new Response('{}', { status: 409 }); } }
+    return real(url, init);
+  };
+  const r = await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_2 });
+  assert.equal(r.status, 409);
+  assert.equal(puts, 1); // 재시도 없음
+});
+
 test('리더보드 — 강제 마감(state.json)이 DEADLINE_ISO 보다 우선한다', async () => {
   const s = setup(makeEnv(), { 'state.json': { 마감: true } });
   const b = await s.call('/api/board', { 관리키: 'admin-secret' });
