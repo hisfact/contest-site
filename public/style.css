@@ -54,7 +54,7 @@ code, .mono { font-family: var(--mono); font-size: 0.93em; }
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
   padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--card);
 }
-.top .brand { font-weight: 700; letter-spacing: -0.01em; }
+.top .brand { font-weight: 700; letter-spacing: -0.01em; word-break: keep-all; }
 .top nav a { margin-right: 14px; text-decoration: none; color: var(--muted); }
 .top nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
 .top .spacer { flex: 1; }
