@@ -20,18 +20,24 @@ body.reveal {
 
 .stage { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
 
-/* 상단 */
+/* 상단 — 대회 이름과 "결과 발표" 태그를 같은 크기로 한 줄에, 진행 상황은 오른쪽 끝. 배너는 둘째 줄. */
 .stage-top {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 20px;
-  padding: 12px 22px; border-bottom: 1px solid var(--line); background: var(--card);
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "title progress" "banner banner";
+  align-items: center; gap: 8px 20px;
+  padding: 14px 22px 12px; border-bottom: 1px solid var(--line); background: var(--card);
 }
-.stage-title .brand { color: var(--muted); font-size: 12px; white-space: nowrap; word-break: keep-all; }
-.stage-title h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; white-space: nowrap; }
-.progress { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.stage-title { grid-area: title; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; min-width: 0; }
+.stage-title .brand { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; word-break: keep-all; line-height: 1.2; }
+.stage-title h1 {
+  margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; white-space: nowrap;
+  color: var(--cursor); border: 2px solid var(--cursor); border-radius: 999px; padding: 2px 18px;
+}
+.progress { grid-area: progress; color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 .progress strong { color: var(--ink); }
 
 /* 지금 연 문항 배너 */
 .banner {
+  grid-area: banner;
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px;
   padding: 8px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line);
   animation: fade .25s ease-out;
@@ -125,6 +131,7 @@ body.reveal {
 @keyframes fadeout { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
 
 @media (max-width: 1100px) {
-  .stage-top { grid-template-columns: 1fr; }
+  .stage-top { grid-template-columns: 1fr; grid-template-areas: "title" "progress" "banner"; }
   .progress { text-align: left; }
+  .stage-title .brand, .stage-title h1 { font-size: 22px; }
 }
