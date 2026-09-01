@@ -130,6 +130,37 @@ seeded.forEach((code, i) => {
   records[code] = rec;
 });
 
+// ── 데모 사이트 입력칸에 미리 채워 둘 견본 제출본 (public/demo-sample.js — 두 사이트에 다 배포되지만 기사 문장뿐이라 새는 것 없음)
+//    빈 팀 코드(13번째 팀)로 2차-1 을 낸다는 설정. 대부분 맞히고 몇 개는 일부러 틀린다 — 정오표가 다채롭게 보이도록.
+const sampleCode = codes[12];
+const sample = {
+  meta: { 참가자ID: 팀[sampleCode].코드표기, 세트: 'A', 조건: '2차-1', 웹검색: false, 모델: 'Solar Pro 4', 지침원문: '숫자·단위·인과·출처를 항목별로 점검하고 확신이 없으면 판단 불가' },
+  answers: 문항.map((q, i) => {
+    const a = articles[i];
+    let 판정 = q.정답;
+    if (i === 2 || i === 7) 판정 = q.정답 === '가짜' ? '진짜' : '가짜';   // 놓침 / 오탐 하나씩
+    if (i === 11) 판정 = '판단 불가';
+    let 인용 = '';
+    if (판정 === '가짜' && q.정답 === '가짜') 인용 = i === 5 ? (a.sentences.find((x) => x !== q.조작문장) ?? '') : (q.조작문장 ?? ''); // 5번은 엉뚱한 문장 → 인용 불일치
+    if (판정 === '가짜' && q.정답 === '진짜') 인용 = a.sentences[0] ?? '';
+    return { 번호: q.번호, 판정, 검사항목: 판정 === '가짜' ? `${q.유형 === '-' ? '숫자' : q.유형} 확인` : '', 근거: 판정 === '가짜' ? '기사 안의 수치·인과 관계가 앞뒤와 맞지 않음' : '', 인용, 확인출처: '' };
+  }),
+};
+{
+  const { errors } = checkSubmission(schema, sample, { setLetter: 'A' });
+  if (errors.length) throw new Error(`견본 제출본 형식 오류: ${JSON.stringify(errors)}`);
+}
+const SAMPLE_OUT = resolve(here, '..', '..', 'public', 'demo-sample.js');
+writeFileSync(SAMPLE_OUT, `/* 데모 사이트 입력칸 견본 — make-demo-data.mjs 가 만든다. 손으로 고치지 말 것.
+   가짜 정답표(contest-private-demo)에 맞춘 2차-1 제출본. 기사 문장만 들어 있어 실제 정답과 무관하다. */
+export const DEMO_TEAM_CODE = ${JSON.stringify(팀[sampleCode].코드표기)};        // 제출 시연용 (제출 기록 없음)
+export const DEMO_RESULT_CODE = ${JSON.stringify(팀[codes[0]].코드표기)};      // 내 결과 시연용 (1차·2차 기록 있음)
+export const DEMO_ADMIN_KEY = 'demo';
+export const DEMO_TEAM_LINES = ${JSON.stringify(codes.slice(12, 15).map((c) => `${팀[c].코드표기}\t${팀[c].팀명}\troom${String(codes.indexOf(c) + 1).padStart(2, '0')}@example.com`).join('\n'))};
+export default ${JSON.stringify(sample, null, 1)};
+`, 'utf8');
+console.log('→', SAMPLE_OUT);
+
 // ── 쓰기
 mkdirSync(join(OUT, 'teams'), { recursive: true });
 const write = (name, obj) => writeFileSync(join(OUT, name), typeof obj === 'string' ? obj : JSON.stringify(obj, null, 1) + '\n', 'utf8');

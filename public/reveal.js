@@ -313,7 +313,7 @@ async function loadBoard() {
   }
 }
 function askKey(err = '') {
-  const input = el('input', { type: 'password', placeholder: '관리키', autocomplete: 'off', style: 'max-width:260px;display:inline-block;margin-right:8px' });
+  const input = el('input', { type: 'password', placeholder: '관리키', autocomplete: 'off', style: 'max-width:260px;display:inline-block;margin-right:8px', value: IS_DEMO ? 'demo' : null }); // 데모 사이트는 관리키를 미리 채워 둔다
   const go = async () => {
     const k = input.value.trim();
     if (!k) return;

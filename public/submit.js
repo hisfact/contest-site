@@ -1,5 +1,5 @@
 /* 제출 화면. 형식 검사는 전부 브라우저에서 한다 — 정답표는 여기 없다. */
-import { api, el, fill, fmtTime, fmtScore, mountTop, remainingText } from './app.js';
+import { api, el, fill, fmtTime, fmtScore, mountTop, remainingText, IS_DEMO } from './app.js';
 import schema from './shared/schema.js';
 import { checkSubmission, phaseOf } from './shared/validate.js';
 import { locateQuote, normalize, QUOTE_MIN } from './shared/textmatch.js';
@@ -23,6 +23,16 @@ setInterval(() => {
 
 const savedCode = sessionStorage.getItem('teamCode');
 if (savedCode) { $('codeInput').value = savedCode; loadStatus(); }
+else if (IS_DEMO) prefillDemo(); // 데모 사이트 — 팀 코드와 견본 JSON 을 미리 채워 둔다
+
+/** 데모 사이트: 입력칸을 견본으로 채우고 상태 조회·형식 검사까지 해 둔다. 진행자는 [제출하기]만 누르면 된다. */
+async function prefillDemo() {
+  const m = await import('./demo-sample.js');
+  $('codeInput').value = m.DEMO_TEAM_CODE;
+  $('jsonInput').value = JSON.stringify(m.default, null, 2);
+  await loadStatus();
+  if (state.status && !state.status.마감후) runChecks();
+}
 
 $('codeBtn').addEventListener('click', loadStatus);
 $('codeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadStatus(); });

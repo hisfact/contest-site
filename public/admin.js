@@ -1,5 +1,5 @@
 /* 운영자 화면. 모든 요청은 관리키를 본문에 담아 Worker 로 보낸다. */
-import { api, el, fill, fmtTime, fmtScore, mountTop } from './app.js';
+import { api, el, fill, fmtTime, fmtScore, mountTop, IS_DEMO } from './app.js';
 
 mountTop('admin.html');
 const $ = (id) => document.getElementById(id);
@@ -8,6 +8,7 @@ let key = sessionStorage.getItem('adminKey') ?? '';
 let overview = null;
 
 if (key) { $('keyInput').value = key; load(); }
+else if (IS_DEMO) import('./demo-sample.js').then((m) => { key = m.DEMO_ADMIN_KEY; $('keyInput').value = key; $('namesInput').value = m.DEMO_TEAM_LINES; load(); }); // 데모: 관리키·팀명 견본 미리 채움
 $('loadBtn').addEventListener('click', () => { key = $('keyInput').value.trim(); load(); });
 $('keyInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { key = $('keyInput').value.trim(); load(); } });
 $('refreshBtn').addEventListener('click', load);

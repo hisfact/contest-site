@@ -1,5 +1,5 @@
 /* 내 결과 — /api/status 가 준 우리 팀 것만 그린다. 다른 팀 데이터도, 우리 팀 순위도 이 화면에 오지 않는다(순위는 결과 발표에서만). */
-import { api, el, fill, fmtTime, fmtScore, mountTop, remainingText } from './app.js';
+import { api, el, fill, fmtTime, fmtScore, mountTop, remainingText, IS_DEMO } from './app.js';
 
 mountTop('board.html');
 const $ = (id) => document.getElementById(id);
@@ -15,6 +15,7 @@ setInterval(() => {
 // 제출 화면에서 확인한 코드가 있으면 바로 불러온다
 const saved = sessionStorage.getItem('teamCode');
 if (saved) { $('codeInput').value = saved; load(saved); }
+else if (IS_DEMO) import('./demo-sample.js').then((m) => { $('codeInput').value = m.DEMO_RESULT_CODE; load(m.DEMO_RESULT_CODE); }); // 데모: 기록 있는 팀으로 미리 채움
 
 $('codeBtn').addEventListener('click', () => load($('codeInput').value));
 $('codeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') load($('codeInput').value); });
