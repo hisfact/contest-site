@@ -131,10 +131,10 @@ async function reopen(btn, team, round) {
 // ────────────────────────────────────────────── 코드 발송 메일 본문 (운영자가 행사용 메일에서 직접 보낸다)
 
 const SITE_URL = location.origin.startsWith('http') && !location.hostname.match(/^(localhost|127\.0\.0\.1)$/) ? location.origin : 'https://scinews-contest.pages.dev';
-const mailSubject = (t) => `[과학뉴스 검증 대회] ${t.팀명} 팀 제출 코드`;
+const mailSubject = (t) => `[AI 동행 프로젝트 책임/안전 분과 해커톤 대회] ${t.팀명} 팀 제출 코드`;
 const mailBody = (t) => `${t.팀명} 팀 안녕하세요.
 
-과학뉴스 검증 대회 결과 제출에 쓰는 팀 코드입니다.
+AI 동행 프로젝트 책임/안전 분과 해커톤 대회 결과 제출에 쓰는 팀 코드입니다.
 
   팀 코드:  ${t.코드표기}
   제출 사이트:  ${SITE_URL}

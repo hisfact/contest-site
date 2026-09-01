@@ -66,7 +66,7 @@ export function remainingText(deadlineIso) {
 export function mountTop(current) {
   const links = [['index.html', '결과 제출'], ['board.html', '리더보드']];
   const top = el('header', { class: 'top' },
-    el('span', { class: 'brand' }, '과학뉴스 검증 대회'),
+    el('span', { class: 'brand' }, 'AI 동행 프로젝트 책임/안전 분과 해커톤 대회'),
     el('nav', {}, links.map(([href, label]) => el('a', { href, 'aria-current': current === href ? 'page' : null }, label))),
     el('span', { class: 'spacer' }),
     el('span', { class: 'server', id: 'serverClock' }),

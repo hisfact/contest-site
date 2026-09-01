@@ -7,7 +7,7 @@
  */
 export default {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "과학뉴스 검증 대회 — 제출 JSON",
+  "title": "AI 동행 프로젝트 책임/안전 분과 해커톤 대회 — 제출 JSON",
   "description": "참가자가 1_1차_템플릿.md / 2_2차_템플릿.md 를 그대로 붙여넣었을 때 나오는 형식. 사이트의 형식 검사와 채점기가 이 스키마로 검증한다.",
   "type": "object",
   "required": [

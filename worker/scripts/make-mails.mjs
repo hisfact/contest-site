@@ -10,7 +10,7 @@
  *
  * 환경변수로 바꿀 수 있는 것
  *   SITE_URL   제출 사이트 주소 (기본 https://scinews-contest.pages.dev)
- *   SUBJECT    메일 제목 (기본 [과학뉴스 검증 대회] {팀명} 팀 제출 코드)
+ *   SUBJECT    메일 제목 (기본 [AI 동행 프로젝트 책임/안전 분과 해커톤 대회] {팀명} 팀 제출 코드)
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -24,7 +24,7 @@ if (!existsSync(teamsPath)) {
   process.exit(1);
 }
 const SITE = process.env.SITE_URL ?? 'https://scinews-contest.pages.dev';
-const SUBJECT = process.env.SUBJECT ?? '[과학뉴스 검증 대회] {팀명} 팀 제출 코드';
+const SUBJECT = process.env.SUBJECT ?? '[AI 동행 프로젝트 책임/안전 분과 해커톤 대회] {팀명} 팀 제출 코드';
 
 const teams = JSON.parse(readFileSync(teamsPath, 'utf8'));
 const rows = Object.entries(teams.팀)
@@ -33,7 +33,7 @@ const rows = Object.entries(teams.팀)
 
 const body = (r) => `${r.팀명} 팀 안녕하세요.
 
-과학뉴스 검증 대회 결과 제출에 쓰는 팀 코드입니다.
+AI 동행 프로젝트 책임/안전 분과 해커톤 대회 결과 제출에 쓰는 팀 코드입니다.
 
   팀 코드:  ${r.코드표기}
   제출 사이트:  ${SITE}
