@@ -4,6 +4,7 @@
  *   POST /api/submit          팀 코드 확인 → 시도 횟수 확인 → 스키마 검증 → 채점 → 저장 → 점수만 반환
  *   GET  /api/status?code=    그 팀의 회차별 제출 여부·점수와 남은 시도 (POST {팀코드} 도 받는다)
  *                             마감 후에는 그 팀의 최종 점수·문항별 정오(결과)도 함께 — 본인 것만. 순위는 주지 않는다(결과 발표에서만)
+ *                             문항별 정오에는 정답 풀이(조작 문장·근거)가 들어간다 — 마감 후 학습용. 원칙 1 의 유일한 예외이며 A세트는 재사용하지 않기로 함(2026-09-01)
  *   POST /api/board           전체 리더보드 (마감 전 = 진행 현황, 마감 후 = 전체 순위). 관리키 필요. 60초 캐시
  *                             학생에게는 열지 않는다 — 전체 결과는 운영자가 결과 발표 화면(reveal.html)에서만 보여 준다
  *   POST /api/admin/overview  전체 기록                       ┐
@@ -313,15 +314,24 @@ async function handleStatus(rawCode, env, ctx) {
   // 마감 후 — 이 팀의 최종 점수와 문항별 정오. 다른 팀 것도, 이 팀의 순위도 담지 않는다 (순위는 결과 발표에서만 공개).
   let 결과;
   if (dl.마감후) {
-    const board = await handleBoard(env, ctx);
+    const [board, key] = await Promise.all([handleBoard(env, ctx), ghGet(env, env.ANSWER_KEY_PATH)]);
     const row = board.행?.find((r) => r.코드 === code);
     if (!row) 결과 = null; // 2차 제출이 없어 순위가 없다
     else {
       const byNo = new Map((board.문항 ?? []).map((q) => [q.번호, q]));
+      // 정답 풀이 — 마감 후에만, 이 팀에게만. 가짜 문항은 조작 문장과 근거, 진짜 문항은 근거 없음.
+      const truth = new Map((key?.data?.문항 ?? []).map((q) => [q.번호, q]));
       const { 코드: _c, 회차별: _r, 순위: _rank, 문항별, ...rest } = row;
       결과 = {
         ...rest,
-        문항별: (문항별 ?? []).map((d) => { const q = byNo.get(d.번호) ?? {}; return { 번호: d.번호, 제목: q.제목 ?? '', 정답: q.정답 ?? null, 난이도: q.난이도 ?? null, 유형: q.유형 ?? null, 함정: q.함정 === true, 판정: d.판정, 점수: d.점수, 인용일치: d.인용일치 }; }),
+        문항별: (문항별 ?? []).map((d) => {
+          const q = byNo.get(d.번호) ?? {};
+          const t = truth.get(d.번호) ?? {};
+          const fake = q.정답 === '가짜';
+          const 근거 = fake && t.근거 && t.근거 !== '-' ? t.근거 : '';
+          return { 번호: d.번호, 제목: q.제목 ?? '', 정답: q.정답 ?? null, 난이도: q.난이도 ?? null, 유형: q.유형 ?? null, 함정: q.함정 === true, 판정: d.판정, 점수: d.점수, 인용일치: d.인용일치,
+            풀이: fake ? { 조작문장: t.조작문장 ?? '', 근거, 인용채점: t.인용채점 !== false } : null };
+        }),
       };
     }
   }

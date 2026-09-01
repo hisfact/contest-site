@@ -253,8 +253,16 @@ test('상태 — 마감 후에는 자기 점수·문항별 정오만 준다 (순
   assert.ok(['진짜', '가짜'].includes(st.결과.문항별[0].정답));
   const text = JSON.stringify(st);
   assert.equal(text.includes('1번 팀'), false); // 다른 팀 이름이 섞이지 않는다
-  assert.equal(text.includes('조작문장'), false);
   assert.equal(text.includes('회차별'), false);
+  // 정답 풀이 — 가짜 문항에만 조작 문장·근거, 진짜 문항은 null
+  const fake = st.결과.문항별.find((d) => d.정답 === '가짜');
+  const real = st.결과.문항별.find((d) => d.정답 === '진짜');
+  assert.ok(fake.풀이.조작문장.length > 10);
+  assert.ok(fake.풀이.근거.length > 0);
+  assert.equal(real.풀이, null);
+  // 마감 전 응답에는 풀이가 한 글자도 없다
+  const beforeText = JSON.stringify(before.body);
+  for (const k of ['풀이', '조작문장', '근거']) assert.equal(beforeText.includes(k), false, k);
 });
 
 test('운영자 — 시스템 초기화는 제출·state 를 지우고 명부·정답표는 남긴다', async () => {

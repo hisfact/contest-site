@@ -92,7 +92,7 @@ function renderResult(st) {
       const [cls, label] = mark(d);
       return el('tr', {},
         el('td', { class: 'mono' }, d.번호),
-        el('td', { style: 'white-space:normal;min-width:240px' }, d.제목, d.함정 ? el('span', { class: 'badge warn', style: 'margin-left:6px' }, '함정') : null),
+        el('td', { style: 'white-space:normal;min-width:280px' }, d.제목, d.함정 ? el('span', { class: 'badge warn', style: 'margin-left:6px' }, '함정') : null, explain(d)),
         el('td', {}, el('span', { class: `badge ${d.정답 === '가짜' ? 'bad' : 'ok'}` }, d.정답)),
         el('td', {}, d.판정),
         el('td', {}, el('span', { class: `badge ${cls}` }, label)),
@@ -100,9 +100,27 @@ function renderResult(st) {
       );
     })),
   );
+  const toggleAll = el('button', { class: 'sm', onclick: () => {
+    const all = [...table.querySelectorAll('details')];
+    const open = all.some((x) => !x.open);
+    all.forEach((x) => { x.open = open; });
+    toggleAll.textContent = open ? '풀이 모두 접기' : '풀이 모두 펼치기';
+  } }, '풀이 모두 펼치기');
   fill($('content'), summary,
-    el('section', { class: 'card' }, el('h2', {}, `문항별 정오표 — ${r.채택회차}`),
-      el('p', { class: 'muted small' }, '채택된 회차 기준. "인용 불일치"는 가짜를 맞혔지만 조작 문장을 그대로 인용하지 못해 절반만 받은 문항입니다.'),
+    el('section', { class: 'card' },
+      el('div', { class: 'row', style: 'justify-content:space-between' }, el('h2', { style: 'margin:0' }, `문항별 정오표 — ${r.채택회차}`), toggleAll),
+      el('p', { class: 'muted small', style: 'margin-top:8px' }, '채택된 회차 기준. "인용 불일치"는 가짜를 맞혔지만 조작 문장을 그대로 인용하지 못해 절반만 받은 문항입니다. 가짜 문항은 제목 아래 "정답 풀이"를 펼치면 조작된 문장과 근거가 보입니다.'),
       el('div', { class: 'tablewrap' }, table)),
+  );
+}
+
+/** 가짜 문항의 정답 풀이 — 조작 문장과 근거. 마감 후 서버가 이 팀에게만 내려준 것. */
+function explain(d) {
+  const p = d.풀이;
+  if (!p) return null;
+  return el('details', { class: 'explain' },
+    el('summary', {}, '정답 풀이'),
+    p.조작문장 ? el('blockquote', {}, p.조작문장) : el('p', { class: 'muted' }, p.인용채점 ? '조작 문장 정보 없음' : '자유 유형 — 특정 문장 하나가 아니라 기사 전체 구성이 조작된 문항이라 인용 대조를 하지 않습니다.'),
+    p.근거 ? el('p', {}, el('b', {}, '근거 '), p.근거) : null,
   );
 }

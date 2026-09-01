@@ -140,6 +140,12 @@ tr.me td { background: var(--info-bg); }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 5px; background: var(--line); vertical-align: middle; }
 .dot.on { background: var(--ok); }
 
+/* 내 결과 — 정답 풀이 접기/펼치기 */
+details.explain { margin-top: 6px; font-size: 13px; }
+details.explain summary { cursor: pointer; color: var(--accent); font-weight: 600; user-select: none; }
+details.explain blockquote { margin: 8px 0 4px; padding: 8px 12px; border-left: 3px solid var(--bad); background: var(--bad-bg); border-radius: 0 8px 8px 0; white-space: normal; line-height: 1.5; }
+details.explain p { margin: 4px 0 0; white-space: normal; }
+
 /* 막대 */
 .bar { display: inline-block; height: 10px; background: var(--accent); border-radius: 5px; vertical-align: middle; margin-right: 6px; }
 
