@@ -57,7 +57,13 @@ GitHub 대신 메모리 저장소를 쓰고, 정답표는 `test/answer_key.json`
 콘솔에 찍힌다 (`DEVT-EAMA-AAA1` 등). 서버를 끄면 기록은 사라진다.
 `app.js` 는 `localhost` 에서 열리면 자동으로 `127.0.0.1:8787` 을 API 로 쓴다.
 
-## 배포
+## 배포 (2026-09-01 완료)
+
+- 화면: https://scinews-contest.pages.dev (Pages, 출력 디렉터리 `public`)
+- API: https://contest-api.hisfact.workers.dev (Workers Builds, 루트 `/worker`)
+- 둘 다 `main` 에 push 하면 자동 배포된다. 시크릿은 Worker 설정 화면에 들어 있다.
+
+처음부터 다시 하려면:
 
 1. **Worker**
    ```
