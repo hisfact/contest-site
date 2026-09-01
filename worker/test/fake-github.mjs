@@ -22,7 +22,7 @@ export function fakeGitHub(initial = {}) {
         return Response.json({ sha: f.sha, content: encodeUtf8Base64(f.content).replace(/(.{60})/g, '$1\n') });
       }
       const children = [...store.keys()].filter((k) => k.startsWith(path + '/'));
-      if (children.length) return Response.json(children.map((k) => ({ type: 'file', name: k.slice(path.length + 1) })));
+      if (children.length) return Response.json(children.map((k) => ({ type: 'file', name: k.slice(path.length + 1), sha: store.get(k).sha })));
       return new Response('{}', { status: 404 });
     }
     if (method === 'PUT') {

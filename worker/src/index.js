@@ -129,13 +129,17 @@ async function ghGet(env, path) {
   return { sha: j.sha, data: JSON.parse(decodeUtf8Base64(j.content)) };
 }
 
-/** 디렉터리 목록. 없으면 빈 배열. */
-async function ghList(env, dir) {
+/** 디렉터리 목록 — 파일 이름과 sha. 없으면 빈 배열. */
+async function ghListEntries(env, dir) {
   const r = await fetch(`${GH}/repos/${env.PRIVATE_REPO}/contents/${dir}`, { headers: ghHeaders(env) });
   if (r.status === 404) return [];
   if (!r.ok) throw fail(502, `GitHub 목록 실패 ${r.status} (${dir})`);
   const j = await r.json();
-  return Array.isArray(j) ? j.filter((e) => e.type === 'file' && e.name.endsWith('.json')).map((e) => e.name) : [];
+  return Array.isArray(j) ? j.filter((e) => e.type === 'file' && e.name.endsWith('.json')).map((e) => ({ name: e.name, sha: e.sha })) : [];
+}
+/** 디렉터리의 파일 이름 목록. */
+async function ghList(env, dir) {
+  return (await ghListEntries(env, dir)).map((e) => e.name);
 }
 
 /**
@@ -576,13 +580,12 @@ async function handleAdmin(action, body, env) {
     // 정답표와 팀 명부는 건드리지 않는다. 팀명 비우기는 따로 요청(팀명비우기: true)해야 한다.
     // 실수 방지: 본문에 확인: "초기화" 가 있어야 한다. 지운 파일은 git 이력에 남으므로 되살릴 수는 있다.
     if (body.확인 !== '초기화') throw fail(400, '확인란에 "초기화" 라고 적어야 합니다.');
-    const names = await ghList(env, 'teams');
+    // 목록이 주는 sha 로 바로 지운다 — 파일마다 다시 읽으면 Worker 호출당 외부 요청 상한(50)에 걸린다 (2026-09-01 데모 30팀에서 실측).
+    const entries = await ghListEntries(env, 'teams');
     const deleted = [];
-    for (const n of names) { // 순서대로 — 동시에 지우면 ref 갱신이 충돌한다
-      const f = await ghGet(env, `teams/${n}`);
-      if (!f) continue;
-      await ghDelete(env, `teams/${n}`, f.sha, `초기화: ${n} 삭제`);
-      deleted.push(n.replace(/\.json$/, ''));
+    for (const e of entries) { // 순서대로 — 동시에 지우면 ref 갱신이 충돌한다
+      await ghDelete(env, `teams/${e.name}`, e.sha, `초기화: ${e.name} 삭제`);
+      deleted.push(e.name.replace(/\.json$/, ''));
     }
     const st = await ghGet(env, STATE_PATH);
     if (st) await ghDelete(env, STATE_PATH, st.sha, '초기화: state.json 삭제');
