@@ -15,8 +15,12 @@ PRIVATE_REPO = "hisfact/contest-private"   # 저장소 B. Pages 에 연결하지
 ANSWER_KEY_PATH = "answer_key.json"
 TEAMS_PATH = "teams.json"
 SET_NAME = "A_대회용"
-DEADLINE_ISO = "2026-00-00T00:00:00+09:00"  # TODO 대회 당일로 바꾼다. 이 시각 이후 전체 공개
+DEADLINE_ISO = "2026-00-00T00:00:00+09:00"  # TODO 대회 당일로 바꾼다. 이 시각 이후 제출 마감·전체 공개
+# 유효하지 않은 값(위 기본값)이면 "마감 전"으로 본다. 운영자 화면의 강제 마감/열기(저장소 B 의 state.json)가 이 값보다 우선한다.
 
 # 시도 횟수 상한. 서버가 세는 값이며 클라이언트를 믿지 않는다.
 MAX_ATTEMPTS_1 = "1"
 MAX_ATTEMPTS_2 = "3"
+
+# CORS. 배포한 Pages 주소로 좁히려면 주석을 풀고 적는다. 없으면 * (모든 출처 허용).
+# ALLOW_ORIGIN = "https://contest-site.pages.dev"

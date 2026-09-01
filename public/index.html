@@ -15,12 +15,12 @@
     JSON 붙여넣기 → [형식 검사] (브라우저에서만) → 통과해야 [제출하기] 활성
     제출 → /api/submit → 점수 하나만 표시
 
-  형식 검사에 넣을 항목 (전부 브라우저에서 처리, 서버 호출 없음)
-    1. JSON 파싱 — 실패 시 몇 번째 글자에서 깨졌는지
-    2. answers 36개, 번호 001~036 빠짐/중복 없음
-    3. 판정이 진짜/가짜/판단 불가 셋 중 하나
-    4. meta.모델 이 Solar Pro 4 패턴
-    5. meta.조건 이 지금 낼 회차와 맞는지
+  형식 검사 항목 (전부 브라우저에서 처리, 서버 호출 없음 → 시도 횟수를 깎지 않는다)
+    1. JSON 파싱 — 실패 시 몇 번째 줄에서 깨졌는지. 코드펜스(```)는 알아서 벗긴다
+    2. answers 36개, 번호 001~036 빠짐/중복 없음          ┐
+    3. 판정이 진짜/가짜/판단 불가 셋 중 하나                 │ shared/validate.js (Worker 와 같은 코드)
+    4. meta.모델 이 Solar Pro 4 패턴                        ┘
+    5. meta.조건 이 지금 낼 회차와 맞는지 (서버 상태와 비교)
     6. 가짜인데 인용이 비어 있으면 경고 (감점 안내)
     7. 인용 위치 대조 — 그 번호의 articles/NNN.md 안에 그 문장이 있는가
     8. 인용 원문 충실도 — 일치율이 낮으면 "요약하지 말고 그대로 복사" 안내
@@ -30,8 +30,43 @@
 -->
 <main>
   <h1>결과 제출</h1>
-  <p>TODO</p>
+  <p class="lead">AI 가 출력한 JSON 을 그대로 붙여넣으면 즉시 채점됩니다. 형식 검사는 몇 번을 해도 시도 횟수가 줄지 않습니다.</p>
+
+  <section class="card step" id="step1">
+    <h2><span class="step-no">1</span>팀 코드</h2>
+    <div class="row">
+      <input type="text" class="code" id="codeInput" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" aria-label="팀 코드">
+      <button class="primary" id="codeBtn">확인</button>
+      <span class="muted small">배부받은 12자 코드. 하이픈·대소문자는 상관없습니다.</span>
+    </div>
+    <div id="statusBox" hidden></div>
+  </section>
+
+  <section class="card step" id="step2" data-disabled="true">
+    <h2><span class="step-no">2</span>JSON 붙여넣기 · 형식 검사</h2>
+    <label for="jsonInput">템플릿 출력 전체 (<code>{ "meta": …, "answers": [ … ] }</code>)</label>
+    <textarea id="jsonInput" placeholder='{ "meta": { "참가자ID": "...", "세트": "A", "조건": "2차-1", "웹검색": false, "모델": "Solar Pro 4", ... }, "answers": [ ... 36개 ... ] }' spellcheck="false"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" id="checkBtn">형식 검사</button>
+      <span class="muted small" id="checkHint">서버를 부르지 않습니다. 통과해야 제출 버튼이 열립니다.</span>
+    </div>
+    <ul class="checks" id="checkList" hidden></ul>
+  </section>
+
+  <section class="card step" id="step3" data-disabled="true">
+    <h2><span class="step-no">3</span>제출</h2>
+    <div id="submitBox">
+      <p class="muted" id="submitHint">형식 검사를 통과하면 열립니다.</p>
+      <div class="row">
+        <button class="primary" id="submitBtn" disabled>제출하기</button>
+      </div>
+      <div id="confirmBox" class="alert warn" hidden></div>
+    </div>
+    <div id="resultBox" hidden></div>
+  </section>
+
+  <footer>채점은 서버에서만 이루어지며, 문항별 정답은 대회 종료 후 리더보드에 공개됩니다.</footer>
 </main>
-<script type="module" src="app.js"></script>
+<script type="module" src="submit.js"></script>
 </body>
 </html>

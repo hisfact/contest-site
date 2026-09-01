@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
 <title>운영자 — 과학뉴스 검증 대회</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,15 +13,55 @@
   실제 방어는 Worker 가 ADMIN_KEY 로 한다. 이 페이지에 비밀값을 쓰지 않는다.
 
   할 일
-    - 팀명 일괄 입력 (당일 구글시트에서 받은 코드↔팀명 붙여넣기)
-    - 제출 현황 한눈에 보기
-    - 마감 수동 전환
-    - 특정 팀 재제출 허용 (사고 대응)
+    - 팀명 일괄 입력 (당일 구글시트에서 받은 코드↔팀명 붙여넣기)     → POST /api/admin/teams
+    - 제출 현황 한눈에 보기 (점수 포함 — 운영자만)                  → POST /api/admin/overview
+    - 마감 수동 전환 (강제 마감 / 강제 열기 / 자동)                 → POST /api/admin/deadline
+    - 특정 팀 재제출 허용 (사고 대응) — 한 회차를 취소해 칸을 다시 연다 → POST /api/admin/reopen
 -->
-<main>
+<main class="wide">
   <h1>운영자</h1>
-  <p>TODO</p>
+  <p class="lead">관리키는 Worker 시크릿 <code>ADMIN_KEY</code> 와 같은 값입니다. 이 화면은 브라우저 세션에만 키를 기억합니다.</p>
+
+  <section class="card">
+    <div class="row">
+      <input type="password" id="keyInput" placeholder="관리키" autocomplete="off" style="max-width:320px">
+      <button class="primary" id="loadBtn">불러오기</button>
+      <span class="muted small" id="loadMsg"></span>
+    </div>
+  </section>
+
+  <div id="panels" hidden>
+    <section class="card">
+      <h2>마감</h2>
+      <div class="row" id="deadlineRow"></div>
+    </section>
+
+    <section class="card">
+      <h2>팀명 일괄 입력</h2>
+      <p class="muted small">한 줄에 하나, <code>코드 [탭 또는 쉼표] 팀명</code>. 구글시트에서 두 열을 복사해 붙이면 그대로 됩니다. 코드의 하이픈·대소문자는 상관없습니다.</p>
+      <textarea id="namesInput" class="short" placeholder="C6XY-RWGG-3ATE	과학탐사대&#10;..." spellcheck="false"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="previewBtn">미리보기</button>
+        <button class="primary" id="applyBtn" disabled>반영</button>
+        <span class="muted small" id="namesMsg"></span>
+      </div>
+      <div id="namesPreview"></div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">제출 현황</h2>
+        <div class="row">
+          <button class="sm" id="refreshBtn">새로 고침</button>
+          <button class="sm" id="downloadBtn">전체 기록 JSON 내려받기</button>
+        </div>
+      </div>
+      <p class="muted small" id="overviewMeta"></p>
+      <div class="tablewrap" id="overview"></div>
+      <p class="muted small">각 칸의 <b>취소</b>는 그 회차 기록을 취소 목록으로 옮기고 칸을 다시 엽니다. 팀이 잘못된 파일을 낸 사고에만 쓰세요. 기록은 지워지지 않습니다.</p>
+    </section>
+  </div>
 </main>
-<script type="module" src="app.js"></script>
+<script type="module" src="admin.js"></script>
 </body>
 </html>

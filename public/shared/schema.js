@@ -1,4 +1,11 @@
-{
+/**
+ * 제출 JSON 스키마 — 브라우저(형식 검사)와 Worker(제출 접수)가 함께 쓴다.
+ *
+ * 원본: Documents/데이터1/대회용/운영/schema.json (2026-09-01 판).
+ * .json 이 아니라 .js 로 둔 이유: Node 테스트와 Worker 번들러, 브라우저가 모두 별도 설정 없이
+ * ES 모듈로 import 할 수 있게 하려는 것이다. 내용은 JSON 그대로다.
+ */
+export default {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "과학뉴스 검증 대회 — 제출 JSON",
   "description": "참가자가 1_1차_템플릿.md / 2_2차_템플릿.md 를 그대로 붙여넣었을 때 나오는 형식. 사이트의 형식 검사와 채점기가 이 스키마로 검증한다.",
@@ -104,4 +111,4 @@
       }
     }
   }
-}
+};

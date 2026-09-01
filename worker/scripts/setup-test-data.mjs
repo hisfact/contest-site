@@ -6,7 +6,7 @@
  *
  *   npm test  →  setup:test 가 먼저 돈다
  */
-import { cpSync, existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 
@@ -25,8 +25,18 @@ if (!existsSync(src)) {
   process.exit(1);
 }
 
+// 덮어쓸 때 파일을 지우고 다시 만들지 않고 내용만 바꾼다 (삭제 권한이 없는 환경에서도 돌게).
+function copyInto(from, to) {
+  if (statSync(from).isDirectory()) {
+    mkdirSync(to, { recursive: true });
+    for (const n of readdirSync(from)) copyInto(join(from, n), join(to, n));
+  } else {
+    copyFileSync(from, to);
+  }
+}
+
 mkdirSync(dest, { recursive: true });
 for (const name of ['answer_key.json', 'fixtures', 'fixtures_README.md']) {
-  cpSync(join(src, name), join(dest, name), { recursive: true });
+  copyInto(join(src, name), join(dest, name));
 }
 console.log('테스트 데이터 준비 완료 (커밋되지 않습니다)');
