@@ -146,7 +146,9 @@ async function ghList(env, dir) {
  * 그래서 파일 sha 가 그대로인(= 다른 팀과의 경쟁일 뿐인) 경우에는 잠깐 쉬었다가 다시 시도한다.
  * 파일 sha 자체가 바뀌었으면(= 같은 팀이 동시에 냈으면) 진짜 충돌이므로 409 로 돌려준다.
  */
-const PUT_RETRIES = 6;
+// 재시도 횟수·간격: 30팀이 같은 초에 내면 GitHub 가 커밋을 하나씩 처리하므로 20초 가까이 걸린다(2026-09-01 실측 18.6초).
+// 그 안에 들어오도록 최대 12회, 점점 길게(0.4초·0.8초·… + 무작위 0.8초) 기다린다. 기다리는 시간은 CPU 를 쓰지 않는다.
+const PUT_RETRIES = 12;
 async function ghPut(env, path, obj, sha, message) {
   const body = JSON.stringify({ message, content: encodeUtf8Base64(JSON.stringify(obj, null, 1)), ...(sha ? { sha } : {}) });
   for (let attempt = 0; ; attempt++) {
@@ -160,8 +162,9 @@ async function ghPut(env, path, obj, sha, message) {
     // 충돌 — 이 파일이 그새 바뀌었나? (같은 팀 동시 제출) 아니면 브랜치 경쟁일 뿐인가?
     const cur = await ghGet(env, path);
     const changed = (cur?.sha ?? null) !== (sha ?? null);
-    if (changed || attempt >= PUT_RETRIES) throw fail(409, '같은 팀의 제출이 동시에 들어왔습니다. 잠시 후 다시 시도하세요.');
-    await new Promise((res) => setTimeout(res, 250 * (attempt + 1) + Math.random() * 500));
+    if (changed) throw fail(409, '같은 팀의 제출이 동시에 들어왔습니다. 잠시 후 다시 시도하세요.');
+    if (attempt >= PUT_RETRIES) throw fail(409, '지금 제출이 몰려 저장에 실패했습니다. 시도 횟수는 차감되지 않았으니 잠시 후 다시 제출하세요.');
+    await new Promise((res) => setTimeout(res, 400 * (attempt + 1) + Math.random() * 800));
   }
 }
 
