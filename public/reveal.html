@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>결과 발표 — 과학뉴스 검증 대회</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="reveal.css">
+</head>
+<body class="reveal">
+<!--
+  결과 발표 화면 (ICPC 리졸버 방식).
+
+  마감 후 /api/board 가 내려주는 문항별 채점 결과를, 처음엔 전부 가린 채 시작해서
+  꼴찌 팀부터 한 번 클릭할 때마다 문항 하나씩(001 → 036) 연다.
+  열릴 때마다 그 팀의 누적 점수가 오르고, 이미 공개된 팀들 사이에서 순위가 바뀌면 행이 움직인다.
+  36문항이 다 열리면 그 팀의 순위가 확정되고 다음 팀(한 단계 위)으로 넘어간다.
+  마지막에 여는 팀이 우승 팀이다.
+
+  조작
+    클릭 · Space · →   문항 하나 열기
+    Enter              지금 팀의 남은 문항을 빠르게 전부 열기
+    ← · Backspace      한 단계 되돌리기
+    A                  자동 재생 / 멈춤
+    R                  처음부터
+    F                  전체 화면
+
+  순위 판단은 board.js 와 같은 기준(가중 점수 → 인용일치 → 오탐 적은 순 → 먼저 제출)이며,
+  다 열리면 서버가 준 순위와 정확히 같아진다. 정답표는 이 화면에 없다 — 서버가 준 문항별 채점 결과만 그린다.
+
+  마감 전에는 서버가 점수를 주지 않으므로 열리지 않는다. 미리 보려면 reveal.html?demo=1 (가짜 데이터).
+-->
+<div class="stage" id="stage">
+  <header class="stage-top">
+    <div class="stage-title">
+      <span class="brand">과학뉴스 검증 대회</span>
+      <h1 id="title">결과 발표</h1>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+    <div class="progress" id="progress"></div>
+  </header>
+
+  <div class="stage-body" id="body">
+    <p class="lead-msg" id="msg">불러오는 중…</p>
+    <div class="board" id="board" hidden>
+      <div class="rrow head" id="head"></div>
+      <div class="rows" id="rows"></div>
+    </div>
+  </div>
+
+  <footer class="stage-bar" id="bar">
+    <button id="btnPrev" title="한 단계 되돌리기 (← / Backspace)">← 이전</button>
+    <button id="btnNext" class="primary" title="문항 하나 열기 (Space / → / 클릭)">다음 문항 →</button>
+    <button id="btnTeam" title="지금 팀의 남은 문항 전부 (Enter)">이 팀 끝까지 ⏎</button>
+    <button id="btnAuto" title="자동 재생 (A)">자동 재생</button>
+    <span class="spacer"></span>
+    <span class="legend">
+      <span class="c full">✓</span> 정답(인용 일치)
+      <span class="c half">½</span> 가짜 적발, 인용 불일치
+      <span class="c unk">?</span> 판단 불가
+      <span class="c zero">✕</span> 오답
+    </span>
+    <span class="spacer"></span>
+    <button id="btnReset" class="sm" title="처음부터 (R)">처음부터</button>
+    <button id="btnFull" class="sm" title="전체 화면 (F)">전체 화면</button>
+    <a href="board.html" class="sm-link">리더보드로</a>
+  </footer>
+</div>
+<script type="module" src="reveal.js"></script>
+</body>
+</html>

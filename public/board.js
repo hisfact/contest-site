@@ -29,6 +29,8 @@ function render(b) {
   fill($('meta'), 
     el('div', {}, `팀 ${b.팀수}개 · ${fmtTime(b.생성시각)} 기준`),
     b.강제 === true ? el('div', {}, '운영자가 마감함') : b.강제 === false ? el('div', {}, '운영자가 열어 둠') : b.마감시각 ? el('div', {}, `마감 ${fmtTime(b.마감시각, 'long')}`) : null,
+    // 마감 후에만 — 시상식용 한 문항씩 공개 화면 (reveal.html)
+    b.마감후 ? el('div', { style: 'margin-top:6px' }, el('a', { href: 'reveal.html', class: 'btn-link' }, '▶ 결과 발표 모드')) : null,
   );
   if (!b.마감후) return renderBefore(b);
   return renderAfter(b);

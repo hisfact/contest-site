@@ -97,6 +97,7 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 button.danger { color: var(--bad); border-color: var(--bad); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button.sm { padding: 4px 10px; font-size: 13px; font-weight: 500; }
+.btn-link { display: inline-block; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--accent); color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 600; }
 
 /* 배지·알림 */
 .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid var(--line); color: var(--muted); }
