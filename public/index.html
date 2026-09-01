@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>결과 제출 — 과학뉴스 검증 대회</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--
+  학생 제출 화면.
+
+  화면 흐름
+    팀 코드 입력 → 상태 조회(/api/status) → 남은 시도 표시
+    JSON 붙여넣기 → [형식 검사] (브라우저에서만) → 통과해야 [제출하기] 활성
+    제출 → /api/submit → 점수 하나만 표시
+
+  형식 검사에 넣을 항목 (전부 브라우저에서 처리, 서버 호출 없음)
+    1. JSON 파싱 — 실패 시 몇 번째 글자에서 깨졌는지
+    2. answers 36개, 번호 001~036 빠짐/중복 없음
+    3. 판정이 진짜/가짜/판단 불가 셋 중 하나
+    4. meta.모델 이 Solar Pro 4 패턴
+    5. meta.조건 이 지금 낼 회차와 맞는지
+    6. 가짜인데 인용이 비어 있으면 경고 (감점 안내)
+    7. 인용 위치 대조 — 그 번호의 articles/NNN.md 안에 그 문장이 있는가
+    8. 인용 원문 충실도 — 일치율이 낮으면 "요약하지 말고 그대로 복사" 안내
+
+  7·8번은 조작 문장을 한 글자도 알려주지 않는다. 기사에 있는 문장인지만 본다.
+  참가자는 이미 기사 36편을 갖고 있으므로 articles/ 를 여기 실어도 새는 정보가 없다.
+-->
+<main>
+  <h1>결과 제출</h1>
+  <p>TODO</p>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

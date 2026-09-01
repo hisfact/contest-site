@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "과학뉴스 검증 대회 — 제출 JSON",
+  "description": "참가자가 1_1차_템플릿.md / 2_2차_템플릿.md 를 그대로 붙여넣었을 때 나오는 형식. 사이트의 형식 검사와 채점기가 이 스키마로 검증한다.",
+  "type": "object",
+  "required": [
+    "meta",
+    "answers"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "참가자ID",
+        "세트",
+        "조건",
+        "웹검색",
+        "모델"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "참가자ID": {
+          "type": "string",
+          "minLength": 1,
+          "description": "배부받은 12자 팀 코드. 하이픈 포함 여부는 무관하다."
+        },
+        "세트": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        "조건": {
+          "type": "string",
+          "enum": [
+            "1차",
+            "2차-1",
+            "2차-2",
+            "2차-3"
+          ]
+        },
+        "웹검색": {
+          "type": "boolean",
+          "description": "이번 회차에 웹 검색을 사용했는지. 1차는 반드시 false."
+        },
+        "모델": {
+          "type": "string",
+          "pattern": "[Ss][Oo][Ll][Aa][Rr][^A-Za-z0-9]*[Pp][Rr][Oo][^A-Za-z0-9]*4",
+          "description": "대회 지정 모델 Solar Pro 4. 표기 흔들림(upstage:solar-pro4, Solar Pro4 등)은 허용되며 대소문자와 구분기호는 무시한다. 다른 모델의 제출은 무효 처리된다."
+        },
+        "지침원문": {
+          "type": "string",
+          "description": "2차에만 해당. 검사 절차에 쓴 내용을 한 줄로 옮긴 것."
+        }
+      }
+    },
+    "answers": {
+      "type": "array",
+      "minItems": 36,
+      "maxItems": 36,
+      "description": "001부터 순서대로 36개. 빠뜨리면 채점되지 않는다.",
+      "items": {
+        "type": "object",
+        "required": [
+          "번호",
+          "판정"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "번호": {
+            "type": "string",
+            "pattern": "^0(0[1-9]|[12][0-9]|3[0-6])$",
+            "description": "001 형식 세 자리 문자열."
+          },
+          "판정": {
+            "type": "string",
+            "enum": [
+              "진짜",
+              "가짜",
+              "판단 불가"
+            ],
+            "description": "띄어쓰기까지 정확히 일치해야 한다."
+          },
+          "검사항목": {
+            "type": "string",
+            "description": "2차에만 해당. 본인이 쓴 검사 절차 중 어느 항목으로 잡았는지. 가짜가 아니면 빈 문자열."
+          },
+          "근거": {
+            "type": "string",
+            "description": "무엇이 왜 잘못됐는지 한 줄. 가짜이면 반드시 채운다. 점수에 직접 반영되지는 않는다."
+          },
+          "인용": {
+            "type": "string",
+            "description": "조작이 있는 문장 하나를 기사에서 그대로 복사한 것. 요약·의역 금지, 여러 문장을 이어 붙이지 말 것. 가짜가 아니면 빈 문자열."
+          },
+          "확인출처": {
+            "type": "string",
+            "description": "외부 자료로 확인했을 때만 실제 값과 출처. 웹 검색을 쓰지 않았으면 빈 문자열."
+          }
+        }
+      }
+    }
+  }
+}

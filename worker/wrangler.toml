@@ -1,0 +1,22 @@
+# Cloudflare Worker 설정
+#
+# 시크릿은 여기 적지 않는다. 대시보드나 `wrangler secret put` 으로만 넣는다.
+#   wrangler secret put GITHUB_TOKEN   저장소 B에만 쓰기 권한이 있는 파인그레인드 토큰
+#   wrangler secret put ADMIN_KEY      운영자 화면용 임의 문자열
+#
+# 토큰은 이 프로젝트 전용으로 새로 발급한다. 다른 프로젝트 토큰을 재사용하지 않는다.
+
+name = "contest-api"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+PRIVATE_REPO = "hisfact/contest-private"   # 저장소 B. Pages 에 연결하지 않는다
+ANSWER_KEY_PATH = "answer_key.json"
+TEAMS_PATH = "teams.json"
+SET_NAME = "A_대회용"
+DEADLINE_ISO = "2026-00-00T00:00:00+09:00"  # TODO 대회 당일로 바꾼다. 이 시각 이후 전체 공개
+
+# 시도 횟수 상한. 서버가 세는 값이며 클라이언트를 믿지 않는다.
+MAX_ATTEMPTS_1 = "1"
+MAX_ATTEMPTS_2 = "3"

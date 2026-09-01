@@ -1,0 +1,15 @@
+.env
+.env.*
+*.key
+*.pem
+.wrangler/
+node_modules/
+.DS_Store
+
+# ── 정답표는 이 저장소에 절대 들어가면 안 된다 ──────────────────
+# 이 저장소는 Pages 에 연결되므로 커밋한 파일이 전부 웹으로 열린다.
+# 테스트용 정답표와 픽스처는 contest-private/test-data/ 에 있고,
+# `npm run setup:test` 로 여기에 복사해 쓴다. 커밋하지 않는다.
+worker/test/answer_key.json
+worker/test/fixtures/
+worker/test/fixtures_README.md
