@@ -3,36 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>리더보드 — AI 동행 프로젝트 책임/안전 분과 해커톤 대회</title>
+<title>내 결과 — AI 동행 프로젝트 책임/안전 분과 해커톤 대회</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <!--
-  리더보드.
+  내 결과 — 학생이 자기 팀 것만 본다. (예전 이름: 리더보드)
 
-  마감 전 — 진행 현황만 보인다
-    팀 / 1차 / 2차-1 / 2차-2 / 2차-3 제출 여부 / 마지막 제출 시각
-    점수는 절대 보이지 않는다. 남의 점수를 보고 지침을 베끼는 일을 막는다.
+  다른 팀의 점수·순위는 이 화면에 없다. 서버(/api/status)가 그 팀 것만 내려주기 때문에
+  화면을 뜯어봐도 남의 결과는 나오지 않는다. 전체 순위는 운영자가 결과 발표 화면(reveal.html, 관리키 필요)에서만 공개한다.
 
-  마감 후 — 전체 공개
-    순위 · 팀 · 채택 회차 · 원점수 · 계수 · 최종 · 인용일치 · 오탐 · 제출시각
-    정렬은 Worker 가 scoring.js 의 compareTeams 로 해서 내려준다
-    난이도별 평균 적발률, 문항별 정답률도 함께 보여준다
-    오른쪽 위에 "결과 발표 모드" 링크가 생긴다 → reveal.html (시상식용, 꼴찌 팀부터 한 문항씩 공개)
+  마감 전 — 회차별 제출 여부·점수·남은 시도 (제출 화면의 상태 칸과 같다)
+  마감 후 — 위에 더해 내 순위 / 최종 점수 / 채택 회차 / 문항별 정오표(정답·내 판정·인용 일치·점수)
 
-  마감 여부는 Worker 가 정한다(DEADLINE_ISO 또는 운영자 강제 전환). 브라우저 시각으로 판단하지 않는다.
-  60초마다 새로 고친다 (Worker 쪽 캐시도 60초).
+  마감 여부는 서버가 정한다. 브라우저 시각으로 판단하지 않는다.
 -->
-<main class="wide">
-  <div class="row" style="justify-content:space-between">
-    <div>
-      <h1>리더보드</h1>
-      <p class="lead" id="lead">불러오는 중…</p>
+<main>
+  <h1>내 결과</h1>
+  <p class="lead">팀 코드를 넣으면 우리 팀의 제출 현황과 점수를 볼 수 있습니다. 마감 후에는 순위와 문항별 정오표도 여기서 봅니다.</p>
+
+  <section class="card">
+    <div class="row">
+      <input type="text" class="code" id="codeInput" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" aria-label="팀 코드">
+      <button class="primary" id="codeBtn">확인</button>
+      <span class="muted small">배부받은 12자 코드. 하이픈·대소문자는 상관없습니다.</span>
     </div>
-    <div class="right small muted" id="meta"></div>
-  </div>
+    <div id="statusBox" hidden></div>
+  </section>
+
   <div id="content"></div>
-  <footer>순위는 2차 세 회차 중 가중 점수가 가장 높은 하나로 정합니다. 동점이면 인용 일치 많은 순 → 오탐 적은 순 → 먼저 제출한 순.</footer>
+  <footer>순위는 2차 세 회차 중 가중 점수가 가장 높은 하나로 정합니다. 동점이면 인용 일치 많은 순 → 오탐 적은 순 → 먼저 제출한 순. 전체 순위는 결과 발표 때 공개됩니다.</footer>
 </main>
 <script type="module" src="board.js"></script>
 </body>

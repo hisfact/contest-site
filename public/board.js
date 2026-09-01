@@ -1,107 +1,108 @@
-/* 리더보드. 서버가 준 것만 그린다 — 마감 전 응답에는 점수가 들어 있지 않다. */
+/* 내 결과 — /api/status 가 준 우리 팀 것만 그린다. 다른 팀 데이터는 이 화면에 오지 않는다. */
 import { api, el, fill, fmtTime, fmtScore, mountTop, remainingText } from './app.js';
 
 mountTop('board.html');
 const $ = (id) => document.getElementById(id);
-const myName = sessionStorage.getItem('teamName');
-let board = null;
+const ROUNDS = ['1차', '2차-1', '2차-2', '2차-3'];
+const COEF = { '2차-1': '1.00', '2차-2': '0.95', '2차-3': '0.90' };
+let status = null;
 
 setInterval(() => {
-  const dl = board?.마감시각;
-  $('serverClock').textContent = dl && !board.마감후 ? `마감까지 ${remainingText(dl)}` : (board?.마감후 ? '마감' : '');
+  const dl = status?.마감시각;
+  $('serverClock').textContent = dl && !status.마감후 ? `마감까지 ${remainingText(dl)}` : (status?.마감후 ? '마감' : '');
 }, 1000);
 
-async function load() {
+// 제출 화면에서 확인한 코드가 있으면 바로 불러온다
+const saved = sessionStorage.getItem('teamCode');
+if (saved) { $('codeInput').value = saved; load(saved); }
+
+$('codeBtn').addEventListener('click', () => load($('codeInput').value));
+$('codeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') load($('codeInput').value); });
+
+async function load(raw) {
+  const code = (raw ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const box = $('statusBox');
+  if (code.length < 6) { fill(box, el('div', { class: 'alert warn' }, '팀 코드를 입력하세요.')); box.hidden = false; return; }
+  fill(box, el('p', { class: 'muted' }, '확인 중…')); box.hidden = false;
+  fill($('content'));
   try {
-    board = await api('/api/board');
-    render(board);
+    status = await api(`/api/status?code=${encodeURIComponent(code)}`);
+    sessionStorage.setItem('teamCode', code);
+    sessionStorage.setItem('teamName', status.팀명);
+    renderStatus(status);
+    renderResult(status);
   } catch (e) {
-    $('lead').textContent = e.message;
+    status = null;
+    fill(box, el('div', { class: 'alert bad' }, e.status === 403 ? '등록되지 않은 팀 코드입니다. 배부받은 코드를 다시 확인하세요.' : e.message));
   }
 }
-load();
-setInterval(load, 60_000);
 
-const ROUNDS = ['1차', '2차-1', '2차-2', '2차-3'];
-const DIFF_ORDER = ['하', '중', '상'];
-
-function render(b) {
-  fill($('meta'), 
-    el('div', {}, `팀 ${b.팀수}개 · ${fmtTime(b.생성시각)} 기준`),
-    b.강제 === true ? el('div', {}, '운영자가 마감함') : b.강제 === false ? el('div', {}, '운영자가 열어 둠') : b.마감시각 ? el('div', {}, `마감 ${fmtTime(b.마감시각, 'long')}`) : null,
-    // 마감 후에만 — 시상식용 한 문항씩 공개 화면 (reveal.html)
-    b.마감후 ? el('div', { style: 'margin-top:6px' }, el('a', { href: 'reveal.html', class: 'btn-link' }, '▶ 결과 발표 모드')) : null,
+function renderStatus(st) {
+  fill($('statusBox'),
+    el('div', { class: 'row', style: 'margin-top:12px' },
+      el('strong', {}, st.팀명),
+      st.이메일 ? el('span', { class: 'muted small' }, st.이메일) : null,
+      el('span', { class: 'badge info mono' }, st.코드표기),
+      st.마감후 ? el('span', { class: 'badge bad' }, '마감') : el('span', { class: 'badge ok' }, '진행 중'),
+    ),
+    el('div', { class: 'status-round' }, ROUNDS.map((r) => {
+      const s = st.제출[r];
+      return el('div', {},
+        el('div', { class: 'rn' }, r, r === '1차' ? ' (순위 미반영)' : ` · 계수 ${COEF[r]}`),
+        s ? el('div', { class: 'rv' }, `${fmtScore(s.점수)}점`) : el('div', { class: 'rv muted' }, '—'),
+        el('div', { class: 'muted' }, s ? fmtTime(s.제출시각) : '미제출'),
+      );
+    })),
+    el('p', { class: 'small', style: 'margin:10px 0 0' },
+      st.마감후 ? '마감되었습니다.' : `남은 시도 — 1차 ${st.남은시도['1차']}회 · 2차 ${st.남은시도['2차']}회`,
+      st.마감시각 ? ` · 마감 ${fmtTime(st.마감시각, 'long')}` : '',
+    ),
   );
-  if (!b.마감후) return renderBefore(b);
-  return renderAfter(b);
 }
 
-function renderBefore(b) {
-  $('lead').textContent = `진행 현황 — 제출 ${b.제출건수}건. 점수와 순위는 마감 후에 공개됩니다.`;
+function renderResult(st) {
+  if (!st.마감후) {
+    fill($('content'), el('section', { class: 'card' }, el('div', { class: 'alert info', style: 'margin:0' }, '순위와 문항별 정오표는 마감 후에 이 화면에서 볼 수 있습니다. 점수는 위의 회차별 칸에 바로 반영됩니다.')));
+    return;
+  }
+  const r = st.결과;
+  if (!r) {
+    fill($('content'), el('section', { class: 'card' }, el('div', { class: 'alert warn', style: 'margin:0' }, '2차 제출이 없어 순위에 들지 않았습니다. 1차 점수는 위 칸에서 볼 수 있습니다.')));
+    return;
+  }
+  const summary = el('section', { class: 'card' },
+    el('h2', {}, '최종'),
+    el('div', { class: 'score' },
+      el('span', { class: 'big' }, `${r.순위}위`), el('span', { class: 'of' }, `/ ${r.팀수}팀`),
+      el('span', { class: 'big', style: 'margin-left:24px' }, fmtScore(r.최종점수)), el('span', { class: 'of' }, '점'),
+    ),
+    el('div', { class: 'kv', style: 'margin-top:14px' },
+      el('dt', {}, '채택 회차'), el('dd', {}, `${r.채택회차} · 원점수 ${fmtScore(r.원점수)} × 계수 ${Number(r.계수).toFixed(2)}`),
+      el('dt', {}, '가짜 적발'), el('dd', {}, `${r.적발}개 (인용까지 일치 ${r.인용일치}개)`),
+      el('dt', {}, '오탐'), el('dd', {}, `${r.오탐}개 (진짜를 가짜라고 함)`),
+      el('dt', {}, '판단 불가'), el('dd', {}, `${r.판단불가}개`),
+      el('dt', {}, '제출 시각'), el('dd', {}, fmtTime(r.제출시각)),
+    ),
+  );
+
+  const mark = (d) => (d.점수 >= 1 ? ['ok', '정답'] : d.점수 >= 0.5 ? ['warn', '인용 불일치'] : d.판정 === '판단 불가' ? ['', '판단 불가'] : ['bad', d.정답 === '진짜' ? '오탐' : '놓침']);
   const table = el('table', {},
-    el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, '팀'), ROUNDS.map((r) => el('th', { class: 'center' }, r)), el('th', {}, '마지막 제출'))),
-    el('tbody', {}, b.행.map((r) => el('tr', { class: r.팀명 === myName ? 'me' : null },
-      el('td', { class: 'num' }, r.순번 ?? ''),
-      el('td', {}, r.팀명),
-      ROUNDS.map((k) => el('td', { class: 'center' }, el('span', { class: `dot ${r.제출[k] ? 'on' : ''}`, title: r.제출[k] ? '제출' : '미제출' }))),
-      el('td', { class: 'muted' }, fmtTime(r.마지막제출)),
-    ))),
+    el('thead', {}, el('tr', {}, el('th', {}, '번호'), el('th', {}, '제목'), el('th', {}, '정답'), el('th', {}, '내 판정'), el('th', {}, '결과'), el('th', { class: 'num' }, '점수'))),
+    el('tbody', {}, r.문항별.map((d) => {
+      const [cls, label] = mark(d);
+      return el('tr', {},
+        el('td', { class: 'mono' }, d.번호),
+        el('td', { style: 'white-space:normal;min-width:240px' }, d.제목, d.함정 ? el('span', { class: 'badge warn', style: 'margin-left:6px' }, '함정') : null),
+        el('td', {}, el('span', { class: `badge ${d.정답 === '가짜' ? 'bad' : 'ok'}` }, d.정답)),
+        el('td', {}, d.판정),
+        el('td', {}, el('span', { class: `badge ${cls}` }, label)),
+        el('td', { class: 'num' }, fmtScore(d.점수)),
+      );
+    })),
   );
-  fill($('content'), el('section', { class: 'card' }, el('div', { class: 'tablewrap' }, table)));
-}
-
-function renderAfter(b) {
-  $('lead').textContent = '최종 순위. 정렬 기준은 아래 설명을 참고하세요.';
-  const rank = el('table', {},
-    el('thead', {}, el('tr', {},
-      el('th', { class: 'num' }, '순위'), el('th', {}, '팀'), el('th', { class: 'num' }, '최종'), el('th', {}, '채택'),
-      el('th', { class: 'num' }, '원점수'), el('th', { class: 'num' }, '계수'), el('th', { class: 'num' }, '적발'), el('th', { class: 'num' }, '인용일치'),
-      el('th', { class: 'num' }, '오탐'), el('th', { class: 'num' }, '판단불가'), el('th', { class: 'num' }, '1차'), el('th', {}, '제출시각'),
-    )),
-    el('tbody', {}, b.행.map((r) => el('tr', { class: [r.순위 <= 3 ? `top${r.순위}` : '', r.팀명 === myName ? 'me' : ''].join(' ') },
-      el('td', { class: 'num' }, r.순위),
-      el('td', {}, r.팀명),
-      el('td', { class: 'num' }, el('strong', {}, fmtScore(r.최종점수))),
-      el('td', {}, r.채택회차),
-      el('td', { class: 'num' }, fmtScore(r.원점수)),
-      el('td', { class: 'num' }, r.계수?.toFixed(2) ?? '—'),
-      el('td', { class: 'num' }, r.적발),
-      el('td', { class: 'num' }, r.인용일치),
-      el('td', { class: 'num' }, r.오탐),
-      el('td', { class: 'num' }, r.판단불가),
-      el('td', { class: 'num muted' }, fmtScore(r['1차점수'])),
-      el('td', { class: 'muted' }, fmtTime(r.제출시각)),
-    ))),
-  );
-
-  const diffs = Object.entries(b.난이도별).sort((x, y) => DIFF_ORDER.indexOf(x[0]) - DIFF_ORDER.indexOf(y[0]));
-  const diffCard = el('section', { class: 'card' },
-    el('h2', {}, '난이도별 평균 적발률'),
-    el('p', { class: 'muted small' }, '채택된 회차 기준. 가짜 기사를 가짜로 판정한 비율입니다.'),
-    el('div', { class: 'kv' }, diffs.map(([d, s]) => [
-      el('dt', {}, d),
-      el('dd', {}, el('span', { class: 'bar', style: `width:${Math.max(2, (s.적발률 ?? 0) * 2)}px` }), `${s.적발률 ?? '—'}%`, el('span', { class: 'muted' }, ` (${s.적발}/${s.응답})`)),
-    ]).flat()),
-  );
-
-  const qTable = el('table', {},
-    el('thead', {}, el('tr', {}, el('th', {}, '번호'), el('th', {}, '제목'), el('th', {}, '정답'), el('th', {}, '난이도'), el('th', {}, '유형'), el('th', { class: 'num' }, '정답률'), el('th', { class: 'num' }, '인용일치율'), el('th', { class: 'num' }, '판단불가'))),
-    el('tbody', {}, b.문항.map((q) => el('tr', {},
-      el('td', { class: 'mono' }, q.번호),
-      el('td', { style: 'white-space:normal;min-width:240px' }, q.제목),
-      el('td', {}, el('span', { class: `badge ${q.정답 === '가짜' ? 'bad' : 'ok'}` }, q.정답), q.함정 ? el('span', { class: 'badge warn', style: 'margin-left:4px' }, '함정') : null),
-      el('td', {}, q.난이도),
-      el('td', {}, q.유형),
-      el('td', { class: 'num' }, el('span', { class: 'bar', style: `width:${Math.max(2, (q.정답률 ?? 0) * 0.8)}px` }), q.정답률 === null ? '—' : `${q.정답률}%`),
-      el('td', { class: 'num' }, q.인용일치율 === null ? '—' : `${q.인용일치율}%`),
-      el('td', { class: 'num' }, q.판단불가),
-    ))),
-  );
-
-  fill($('content'), 
-    el('section', { class: 'card' }, el('div', { class: 'tablewrap' }, rank),
-      b.미채점?.length ? el('p', { class: 'muted small', style: 'margin:10px 0 0' }, `2차 제출이 없어 순위에 들지 않은 팀: ${b.미채점.map((r) => r.팀명).join(', ')}`) : null),
-    diffCard,
-    el('section', { class: 'card' }, el('h2', {}, '문항별 정답률'), el('p', { class: 'muted small' }, '채택된 회차 기준. 인용일치율은 가짜 문항에서 조작 문장을 제대로 인용한 비율입니다.'), el('div', { class: 'tablewrap' }, qTable)),
+  fill($('content'), summary,
+    el('section', { class: 'card' }, el('h2', {}, `문항별 정오표 — ${r.채택회차}`),
+      el('p', { class: 'muted small' }, '채택된 회차 기준. "인용 불일치"는 가짜를 맞혔지만 조작 문장을 그대로 인용하지 못해 절반만 받은 문항입니다.'),
+      el('div', { class: 'tablewrap' }, table)),
   );
 }

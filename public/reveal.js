@@ -263,13 +263,17 @@ function bindControls() {
 // ────────────────────────────────────────────── 시작
 async function main() {
   bindControls();
+  await load();
+}
+async function load() {
   let b;
   try {
-    b = DEMO ? demoBoard() : await api('/api/board');
+    b = DEMO ? demoBoard() : await loadBoard();
   } catch (e) {
     $('msg').textContent = e.message;
     return;
   }
+  if (!b) return; // 관리키 입력을 기다리는 중
   if (!b.마감후) {
     fill($('msg'), '아직 마감 전이라 점수가 공개되지 않았습니다. 마감 후에 다시 여세요.', el('br'), el('a', { href: 'reveal.html?demo=1' }, '가짜 데이터로 미리 보기'));
     return;
@@ -290,6 +294,39 @@ async function main() {
   window.__reveal = { get step() { return step; }, set step(v) { step = v; render({ animate: false }); }, standings, order, total, next, prev, ok, PRE: [...PRE], M };
 }
 main();
+
+// ────────────────────────────────────────────── 전체 결과 불러오기 (관리키)
+// 전체 순위는 운영자만 본다. 관리키는 운영자 화면(admin.html)과 같은 sessionStorage 키를 쓴다.
+async function loadBoard() {
+  const key = sessionStorage.getItem('adminKey');
+  if (!key) { askKey(); return null; }
+  try {
+    return await api('/api/board', { 관리키: key });
+  } catch (e) {
+    if (e.status === 401) { sessionStorage.removeItem('adminKey'); askKey('관리키가 맞지 않습니다.'); return null; }
+    throw e;
+  }
+}
+function askKey(err = '') {
+  const input = el('input', { type: 'password', placeholder: '관리키', autocomplete: 'off', style: 'max-width:260px;display:inline-block;margin-right:8px' });
+  const go = async () => {
+    const k = input.value.trim();
+    if (!k) return;
+    sessionStorage.setItem('adminKey', k);
+    $('msg').textContent = '불러오는 중…';
+    load();
+  };
+  fill($('msg'),
+    el('div', {}, '전체 결과는 운영자만 볼 수 있습니다. 관리키를 입력하세요.'),
+    err ? el('div', { style: 'color:var(--zero);margin:6px 0' }, err) : null,
+    el('div', { style: 'margin-top:12px' }, input, el('button', { class: 'primary', onclick: go }, '열기')),
+    el('div', { class: 'small', style: 'margin-top:14px' }, el('a', { href: 'reveal.html?demo=1' }, '가짜 데이터로 미리 보기')),
+  );
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.stopPropagation(); go(); } });
+  input.addEventListener('keyup', (e) => e.stopPropagation());
+  $('msg').hidden = false;
+  setTimeout(() => input.focus(), 0);
+}
 
 // ────────────────────────────────────────────── 데모 데이터 (?demo=1)
 // 서버 응답과 같은 모양의 가짜 리더보드. 실제 정답표·기사와 무관하다.

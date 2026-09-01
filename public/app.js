@@ -64,7 +64,9 @@ export function remainingText(deadlineIso) {
 
 /** 상단 공용 바 */
 export function mountTop(current) {
-  const links = [['index.html', '결과 제출'], ['board.html', '리더보드']];
+  // 상단에는 제출 링크만 둔다. 학생은 마감 후 제출 화면의 "내 결과 보기" 링크(board.html)로 자기 결과만 보고,
+  // 전체 순위는 결과 발표(reveal.html, 관리키 필요)에서만 공개한다.
+  const links = [['index.html', '결과 제출']];
   const top = el('header', { class: 'top' },
     el('span', { class: 'brand' }, 'AI 동행 프로젝트 책임/안전 분과 해커톤 대회'),
     el('nav', {}, links.map(([href, label]) => el('a', { href, 'aria-current': current === href ? 'page' : null }, label))),

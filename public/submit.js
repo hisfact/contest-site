@@ -40,7 +40,7 @@ async function loadStatus(keepResult = false) {
     state.status = st;
     state.clockOffset = Date.parse(st.서버시각) - Date.now();
     sessionStorage.setItem('teamCode', code);
-    sessionStorage.setItem('teamName', st.팀명); // 리더보드에서 내 줄을 강조하는 데만 쓴다
+    sessionStorage.setItem('teamName', st.팀명);
     renderStatus(st);
     $('step2').dataset.disabled = st.마감후 ? 'true' : 'false';
     resetChecks(keepResult);
@@ -76,7 +76,7 @@ function renderStatus(st) {
       `남은 시도 — 1차 ${st.남은시도['1차']}회 · 2차 ${st.남은시도['2차']}회`,
       st.마감시각 ? ` · 마감 ${fmtTime(st.마감시각, 'long')}` : '',
     ),
-    st.마감후 ? el('div', { class: 'alert bad' }, '마감되었습니다. 더 이상 제출할 수 없습니다. 결과는 리더보드에서 확인하세요.') : null,
+    st.마감후 ? el('div', { class: 'alert bad' }, '마감되었습니다. 더 이상 제출할 수 없습니다. ', el('a', { href: 'board.html' }, '내 결과 보기')) : null,
   );
 }
 

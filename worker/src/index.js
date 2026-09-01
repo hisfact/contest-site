@@ -3,7 +3,9 @@
  *
  *   POST /api/submit          팀 코드 확인 → 시도 횟수 확인 → 스키마 검증 → 채점 → 저장 → 점수만 반환
  *   GET  /api/status?code=    그 팀의 회차별 제출 여부·점수와 남은 시도 (POST {팀코드} 도 받는다)
- *   GET  /api/board           리더보드 (마감 전 = 진행 현황만, 마감 후 = 전체 순위). 60초 캐시
+ *                             마감 후에는 그 팀의 순위·최종 점수·문항별 정오(결과)도 함께 — 본인 것만
+ *   POST /api/board           전체 리더보드 (마감 전 = 진행 현황, 마감 후 = 전체 순위). 관리키 필요. 60초 캐시
+ *                             학생에게는 열지 않는다 — 전체 결과는 운영자가 결과 발표 화면(reveal.html)에서만 보여 준다
  *   POST /api/admin/overview  전체 기록                       ┐
  *   POST /api/admin/teams     팀명 일괄 입력                   │ 본문에 관리키 필요
  *   POST /api/admin/deadline  마감 강제 전환 (true/false/null) │
@@ -46,9 +48,14 @@ export default {
       if (p === '/api/submit' && request.method === 'POST')
         return json(await handleSubmit(await readBody(request), env), cors);
       if (p === '/api/status')
-        return json(await handleStatus(request.method === 'POST' ? (await readBody(request)).팀코드 : url.searchParams.get('code'), env), cors);
-      if (p === '/api/board' && request.method === 'GET')
+        return json(await handleStatus(request.method === 'POST' ? (await readBody(request)).팀코드 : url.searchParams.get('code'), env, ctx), cors);
+      if (p === '/api/board' && request.method === 'POST') {
+        // 전체 순위는 관리키가 있어야 본다. 학생은 /api/status 로 자기 결과만 본다.
+        const body = await readBody(request);
+        if (!env.ADMIN_KEY) throw fail(500, 'ADMIN_KEY 가 설정되지 않았습니다.');
+        if (!(await sameSecret(body?.관리키, env.ADMIN_KEY))) throw fail(401, '관리키가 맞지 않습니다.');
         return json(await handleBoard(env, ctx), cors, 200, { 'cache-control': 'no-store' });
+      }
       if (p.startsWith('/api/admin/') && request.method === 'POST')
         return json(await handleAdmin(p.slice('/api/admin/'.length), await readBody(request), env), cors);
       if (p === '/api/health') return json({ ok: true, 시각: new Date().toISOString() }, cors);
@@ -275,7 +282,7 @@ async function handleSubmit(body, env) {
 
 // ────────────────────────────────────────────── 상태
 
-async function handleStatus(rawCode, env) {
+async function handleStatus(rawCode, env, ctx) {
   const code = normalizeCode(rawCode);
   if (code.length < 6) throw fail(400, '팀 코드를 입력하세요.');
   const teams = await loadTeams(env);
@@ -290,6 +297,23 @@ async function handleStatus(rawCode, env) {
   }
   const n1 = nextRound('1차', record, env);
   const n2 = nextRound('2차', record, env);
+
+  // 마감 후 — 이 팀의 순위와 문항별 정오. 다른 팀 것은 담지 않는다.
+  let 결과;
+  if (dl.마감후) {
+    const board = await handleBoard(env, ctx);
+    const row = board.행?.find((r) => r.코드 === code);
+    if (!row) 결과 = null; // 2차 제출이 없어 순위가 없다
+    else {
+      const byNo = new Map((board.문항 ?? []).map((q) => [q.번호, q]));
+      const { 코드: _c, 회차별: _r, 문항별, ...rest } = row;
+      결과 = {
+        ...rest,
+        팀수: board.행.length,
+        문항별: (문항별 ?? []).map((d) => { const q = byNo.get(d.번호) ?? {}; return { 번호: d.번호, 제목: q.제목 ?? '', 정답: q.정답 ?? null, 난이도: q.난이도 ?? null, 유형: q.유형 ?? null, 함정: q.함정 === true, 판정: d.판정, 점수: d.점수, 인용일치: d.인용일치 }; }),
+      };
+    }
+  }
   return {
     코드: code,
     코드표기: entry.코드표기 ?? code,
@@ -302,6 +326,7 @@ async function handleStatus(rawCode, env) {
     마감후: dl.마감후,
     마감시각: dl.마감시각,
     서버시각: new Date().toISOString(),
+    ...(dl.마감후 ? { 결과 } : {}),
   };
 }
 
@@ -348,6 +373,7 @@ export async function buildBoard(env) {
       const rounds = Object.keys(rec?.제출 ?? {});
       const last = rounds.map((r) => rec.제출[r].제출시각).sort().at(-1) ?? null;
       return {
+        코드: code,
         순번: e.순번 ?? null,
         팀명: teamLabel(e, code),
         제출: { '1차': rounds.includes('1차'), '2차-1': rounds.includes('2차-1'), '2차-2': rounds.includes('2차-2'), '2차-3': rounds.includes('2차-3') },
@@ -373,6 +399,7 @@ export async function buildBoard(env) {
     const fin = finalOf(rec);
     const first = rec.제출?.['1차'];
     const row = {
+      코드: code,
       순번: e.순번 ?? null,
       팀명: teamLabel(e, code),
       '1차점수': first?.원점수 ?? null,

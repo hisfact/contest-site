@@ -187,7 +187,7 @@ test('리더보드 — 마감 전에는 점수가 한 글자도 없다', async (
   const { call } = setup();
   await call('/api/submit', { 팀코드: 'WXYZWXYZ6789', result: SUB_2 });
   await call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_1 });
-  const b = await call('/api/board');
+  const b = await call('/api/board', { 관리키: 'admin-secret' });
   assert.equal(b.body.마감후, false);
   assert.equal(b.body.행.length, 2);
   assert.equal(b.body.제출건수, 2);
@@ -204,11 +204,11 @@ test('리더보드 — 마감 후에는 정렬된 전체 순위와 문항별 통
   await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_2B });   // 28.0 → 2차-1 28.0
   await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_2 });    // 26.0 → 2차-2 24.7
   const closed = makeEnv({ DEADLINE_ISO: '2000-01-01T00:00:00+09:00' });
-  const b = await s.call('/api/board').then(() => s.call('/api/board')); // 캐시 없음(node) — 그냥 두 번 불러도 같다
+  const b = await s.call('/api/board', { 관리키: 'admin-secret' }).then(() => s.call('/api/board', { 관리키: 'admin-secret' })); // 캐시 없음(node) — 그냥 두 번 불러도 같다
   assert.equal(b.body.마감후, false);
   // 같은 저장소로 마감 후 환경
   globalThis.fetch = s.gh.fetchImpl;
-  const req = new Request('https://api.test/api/board');
+  const req = new Request('https://api.test/api/board', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ 관리키: 'admin-secret' }) });
   const res = await worker.fetch(req, closed, { waitUntil() {} });
   const body = await res.json();
   assert.equal(body.마감후, true);
@@ -225,9 +225,41 @@ test('리더보드 — 마감 후에는 정렬된 전체 순위와 문항별 통
   assert.equal(JSON.stringify(body).includes('조작문장'), false);
 });
 
+test('리더보드 — 관리키 없이는 못 본다 (GET 도 없다)', async () => {
+  const s = setup();
+  assert.equal((await s.call('/api/board')).status, 404);
+  assert.equal((await s.call('/api/board', {})).status, 401);
+  assert.equal((await s.call('/api/board', { 관리키: 'wrong' })).status, 401);
+  assert.equal((await s.call('/api/board', { 관리키: 'admin-secret' })).status, 200);
+});
+
+test('상태 — 마감 후에는 자기 순위·문항별 정오만 준다', async () => {
+  const s = setup();
+  await s.call('/api/submit', { 팀코드: 'WXYZWXYZ6789', result: SUB_2 });    // 26.0
+  await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_2B });   // 28.0
+  const before = await s.call('/api/status?code=ABCDEFGH2345');
+  assert.equal('결과' in before.body, false);
+  const closed = makeEnv({ DEADLINE_ISO: '2000-01-01T00:00:00+09:00' });
+  globalThis.fetch = s.gh.fetchImpl;
+  const res = await worker.fetch(new Request('https://api.test/api/status?code=wxyz-wxyz-6789'), closed, { waitUntil() {} });
+  const st = await res.json();
+  assert.equal(st.마감후, true);
+  assert.equal(st.결과.순위, 2);
+  assert.equal(st.결과.팀수, 2);
+  assert.equal(st.결과.최종점수, 26.0);
+  assert.equal(st.결과.채택회차, '2차-1');
+  assert.equal(st.결과.문항별.length, 36);
+  assert.ok(st.결과.문항별[0].제목.length > 0);
+  assert.ok(['진짜', '가짜'].includes(st.결과.문항별[0].정답));
+  const text = JSON.stringify(st);
+  assert.equal(text.includes('1번 팀'), false); // 다른 팀 이름이 섞이지 않는다
+  assert.equal(text.includes('조작문장'), false);
+  assert.equal(text.includes('회차별'), false);
+});
+
 test('리더보드 — 강제 마감(state.json)이 DEADLINE_ISO 보다 우선한다', async () => {
   const s = setup(makeEnv(), { 'state.json': { 마감: true } });
-  const b = await s.call('/api/board');
+  const b = await s.call('/api/board', { 관리키: 'admin-secret' });
   assert.equal(b.body.마감후, true);
   const sub = await s.call('/api/submit', { 팀코드: 'ABCDEFGH2345', result: SUB_2 });
   assert.equal(sub.status, 403);
@@ -263,7 +295,7 @@ test('운영자 — 관리키 없으면 401, 팀명 일괄, 마감 전환, 회�
   assert.equal(d.body.현재.마감후, true);
   assert.equal((await s.call('/api/submit', { 팀코드: 'WXYZWXYZ6789', result: SUB_2 })).status, 403);
   await s.call('/api/admin/deadline', { 관리키: 'admin-secret', 마감: null });
-  assert.equal((await s.call('/api/board')).body.마감후, false);
+  assert.equal((await s.call('/api/board', { 관리키: 'admin-secret' })).body.마감후, false);
 
   const ro = await s.call('/api/admin/reopen', { 관리키: 'admin-secret', 코드: 'ABCDEFGH2345', 회차: '2차-1', 사유: '잘못된 파일 제출' });
   assert.equal(ro.status, 200, JSON.stringify(ro.body));
