@@ -10,6 +10,6 @@
   "dev:local": "npm run setup:test && node scripts/dev-local.mjs"
  },
  "devDependencies": {
-  "wrangler": "^3"
+  "wrangler": "^4"
  }
 }

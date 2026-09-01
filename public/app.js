@@ -2,7 +2,7 @@
    여기에 정답표를 넣지 않는다. 이 파일은 전부 공개된다. */
 
 // Worker 주소. 배포 뒤 실제 주소로 바꾼다. 로컬에서 `wrangler dev` 를 띄우면 8787 로 붙는다.
-const PROD_API = 'https://contest-api.<계정>.workers.dev'; // TODO 배포 후 실제 주소로
+const PROD_API = 'https://contest-api.hisfact.workers.dev';
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 export const API = isLocal ? 'http://127.0.0.1:8787' : PROD_API;
 

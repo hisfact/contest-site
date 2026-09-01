@@ -68,7 +68,7 @@ GitHub 대신 메모리 저장소를 쓰고, 정답표는 `test/answer_key.json`
    npx wrangler secret put ADMIN_KEY        # 운영자 화면용 임의 문자열 (길게)
    npx wrangler deploy
    ```
-   배포 주소(`https://contest-api.<계정>.workers.dev`)를 `public/app.js` 의 `PROD_API` 에 적고 커밋한다.
+   배포 주소 `https://contest-api.hisfact.workers.dev` 가 `public/app.js` 의 `PROD_API` 에 들어 있다. Worker 는 Cloudflare Workers Builds 로 저장소(루트 `/worker`)에 연결돼 있어 main 에 push 하면 자동 배포된다.
 2. **Pages** — Cloudflare 대시보드에서 이 저장소를 연결한다. 빌드 명령 없음, 출력 디렉터리 `public`.
 3. **대회 당일 전**
    - `wrangler.toml` 의 `DEADLINE_ISO` 를 마감 시각으로 바꾸고 다시 `wrangler deploy`
